@@ -1,19 +1,17 @@
-use core::str;
-
 use axum::{
     extract::FromRequestParts,
     http::{request::Parts, StatusCode},
 };
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine;
 use db::authz;
+use jsonwebtoken::{
+    decode, decode_header,
+    jwk::JwkSet,
+    Algorithm, DecodingKey, Validation,
+};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use std::env;
 
 const X_FORWARDED_ACCESS_TOKEN: &str = "X-Forwarded-Access-Token";
-const X_FORWARDED_USER: &str = "X-Forwarded-User";
-const X_FORWARDED_EMAIL: &str = "X-Forwarded-Email";
-const DANGER_JWT_OVERRIDE: &str = "DANGER_JWT_OVERRIDE";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Jwt {
@@ -23,7 +21,29 @@ pub struct Jwt {
     pub family_name: Option<String>,
 }
 
-// Convert it to something the db crate understands
+#[derive(Debug, Deserialize)]
+struct JwtClaims {
+    sub: String,
+    email: String,
+    given_name: Option<String>,
+    family_name: Option<String>,
+    exp: usize,
+    iat: usize,
+    iss: String,
+    aud: serde_json::Value,
+}
+
+impl From<JwtClaims> for Jwt {
+    fn from(claims: JwtClaims) -> Self {
+        Self {
+            sub: claims.sub,
+            email: claims.email,
+            given_name: claims.given_name,
+            family_name: claims.family_name,
+        }
+    }
+}
+
 impl From<Jwt> for authz::Authentication {
     fn from(val: Jwt) -> Self {
         authz::Authentication {
@@ -35,7 +55,52 @@ impl From<Jwt> for authz::Authentication {
     }
 }
 
-// Extract the JWT from the rquest
+async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
+    let issuer = env::var("OIDC_ISSUER").map_err(|_| ())?;
+    let audience = env::var("OIDC_AUDIENCE").map_err(|_| ())?;
+    let jwks_url = env::var("OIDC_JWKS_URL").map_err(|_| ())?;
+
+    let header = decode_header(token).map_err(|_| ())?;
+    if header.alg != Algorithm::RS256 {
+        return Err(());
+    }
+    let kid = header.kid.ok_or(())?;
+
+    // Fetch the configured realm JWKS. The URL is deployment configuration,
+    // never supplied by the request or read from an unverified token.
+    let jwks: JwkSet = reqwest::get(&jwks_url)
+        .await
+        .map_err(|_| ())?
+        .error_for_status()
+        .map_err(|_| ())?
+        .json()
+        .await
+        .map_err(|_| ())?;
+
+    let jwk = jwks.find(&kid).ok_or(())?;
+    let key = DecodingKey::from_jwk(jwk).map_err(|_| ())?;
+
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_issuer(&[issuer.as_str()]);
+    validation.set_audience(&[audience.as_str()]);
+    validation.required_spec_claims = ["exp", "iat", "iss", "sub"]
+        .iter()
+        .map(|claim| (*claim).to_string())
+        .collect();
+    validation.validate_exp = true;
+    validation.validate_nbf = true;
+    validation.leeway = 30;
+
+    let claims = decode::<JwtClaims>(token, &key, &validation).map_err(|_|)?;
+    // Access these validated fields explicitly; they are intentionally not
+    // accepted from forwarded identity headers.
+    let _validated_metadata = (claims.claims.exp, claims.claims.iat, claims.claims.iss, claims.claims.aud);
+    if claims.claims.email.trim().is_empty() || claims.claims.sub.trim().is_empty() {
+        return Err(());
+    }
+    Ok(claims.claims.into())
+}
+
 impl<S> FromRequestParts<S> for Jwt
 where
     S: Send + Sync,
@@ -43,72 +108,14 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let access_token = if let Ok(override_token) = std::env::var(DANGER_JWT_OVERRIDE) {
-            Some(override_token)
-        } else {
-            // Fall back to header, convert &str to String
-            parts
-                .headers
-                .get(X_FORWARDED_ACCESS_TOKEN)
-                .and_then(|header| header.to_str().ok())
-                .map(|s| s.to_string())
-        };
-        let forwarded_user = parts.headers.get(X_FORWARDED_USER);
-        let forwarded_email = parts.headers.get(X_FORWARDED_EMAIL);
+        let token = parts
+            .headers
+            .get(X_FORWARDED_ACCESS_TOKEN)
+            .and_then(|header| header.to_str().ok())
+            .ok_or((StatusCode::UNAUTHORIZED, "Missing Keycloak access token"))?;
 
-        if let Some(access_token) = access_token {
-            let jwt_parts: Vec<&str> = access_token.split('.').collect();
-
-            if jwt_parts.len() == 3 {
-                if let Ok(payload) = URL_SAFE_NO_PAD.decode(jwt_parts[1]) {
-                    if let Ok(payload_str) = str::from_utf8(&payload) {
-                        let json_value: Result<Value, _> = serde_json::from_str(payload_str);
-                        if let Ok(json_value) = json_value {
-                            if let Some(sub) = json_value.get("sub").and_then(|v| v.as_str()) {
-                                if let Some(email) =
-                                    json_value.get("email").and_then(|v| v.as_str())
-                                {
-                                    let given_name = json_value
-                                        .get("given_name")
-                                        .and_then(|v| v.as_str())
-                                        .map(String::from);
-                                    let family_name = json_value
-                                        .get("family_name")
-                                        .and_then(|v| v.as_str())
-                                        .map(String::from);
-
-                                    let authentication = Jwt {
-                                        sub: sub.to_string(),
-                                        email: email.to_string(),
-                                        given_name,
-                                        family_name,
-                                    };
-
-                                    return Ok(authentication);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } else if let (Some(user), Some(email)) = (forwarded_user, forwarded_email) {
-            let user = user.to_str();
-            let email = email.to_str();
-
-            if let (Ok(sub), Ok(email)) = (user, email) {
-                let authentication = Jwt {
-                    sub: sub.to_string(),
-                    email: email.to_string(),
-                    given_name: None,
-                    family_name: None,
-                };
-
-                return Ok(authentication);
-            }
-        }
-        Err((
-            StatusCode::UNAUTHORIZED,
-            "Didn't find an authentication header",
-        ))
+        verify_keycloak_access_token(token)
+            .await
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid Keycloak access token"))
     }
 }
