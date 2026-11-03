@@ -21,6 +21,7 @@ pub mod oauth_clients;
 pub mod openapi_specs;
 pub mod pipelines;
 pub mod profile;
+pub mod pea;
 pub mod profile_popup;
 pub mod projects;
 pub mod providers;
