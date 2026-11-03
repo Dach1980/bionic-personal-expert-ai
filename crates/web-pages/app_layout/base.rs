@@ -24,7 +24,7 @@ pub fn BaseLayout(props: AppLayoutProps) -> Element {
     rsx!(
         head {
             title {
-                "{props.title}"
+                "Personal Expert AI — {props.title}"
             }
             meta {
                 charset: "utf-8"
