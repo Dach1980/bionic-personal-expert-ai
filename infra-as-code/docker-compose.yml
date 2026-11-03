@@ -87,7 +87,12 @@ services:
     image: ghcr.io/bionic-gpt/bionicgpt:1.13.4
     platform: linux/amd64
     environment:
-      DANGER_JWT_OVERRIDE: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJlbWFpbCI6ImpvaG5AYWNtZS5vcmcifQ.daYgeWqnpmtorlFKjb0sdRFDcPPWfow68KRZh3uUDhc
+      # Authentication is fail-closed: the web server verifies the Keycloak
+      # access token forwarded by the trusted OIDC gateway.
+      OIDC_ISSUER: ${OIDC_ISSUER:?Set OIDC_ISSUER in the local .env file}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:?Set OIDC_AUDIENCE in the local .env file}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:?Set OIDC_JWKS_URL in the local .env file}
+      PEA_API_BASE_URL: ${PEA_API_BASE_URL:?Set PEA_API_BASE_URL in the local .env file}
       APP_DATABASE_URL: postgresql://application_user:testpassword@postgres:5432/bionic-gpt?sslmode=disable
     depends_on:
       postgres:
