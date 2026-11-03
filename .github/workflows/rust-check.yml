@@ -57,6 +57,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Compile web server and its UI dependencies
         run: cargo check -p web-server --locked
+      - name: Run web server tests
+        run: cargo test -p web-server --locked
   web-assets:
     runs-on: ubuntu-latest
     defaults:
