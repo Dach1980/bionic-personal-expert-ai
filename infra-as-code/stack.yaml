@@ -15,7 +15,6 @@ spec:
           port: 30000
         db:
           expose_db_port: 30001
-          danger_override_password: testpassword
       services:
         web:
           env:
@@ -39,6 +38,10 @@ spec:
           hostname-url: https://platform.bionic-gpt.com
       services:
         web:
+          secret_env:
+            - name: PEA_API_BASE_URL
+              secret_name: pea-api-connection
+              secret_key: base_url
           env:
             - name: LOGOUT_URL
               value: "/oidc/realms/bionic-gpt/protocol/openid-connect/logout"
@@ -55,6 +58,10 @@ spec:
           hostname-url: https://app.bionic-gpt.com
       services:
         web:
+          secret_env:
+            - name: PEA_API_BASE_URL
+              secret_name: pea-api-connection
+              secret_key: base_url
           env:
             - name: LOGOUT_URL
               value: "/oidc/realms/bionic-gpt/protocol/openid-connect/logout"
