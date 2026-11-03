@@ -53,6 +53,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply database migrations for Cornucopia query generation
         run: dbmate --wait --migrations-dir crates/db/migrations up
+      - name: Build static assets for Rust compile-time embedding
+        run: |
+          npm --prefix crates/web-assets install
+          npm --prefix crates/web-assets run release
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Compile web server and its UI dependencies
