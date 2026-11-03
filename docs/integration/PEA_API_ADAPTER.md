@@ -33,6 +33,11 @@ All adapter routes require a verified Keycloak token.
 | `GET .../versions/{version_id}/artifacts` | Registered rendered-page artifacts |
 | `GET .../artifacts/{artifact_id}/content` | Verified artifact bytes |
 | `GET .../source-fragments/{fragment_id}/preview` | Source-fragment preview metadata |
+| `GET .../source-fragments/{fragment_id}` | Source-fragment detail |
+| `GET .../reviews` | Project reviews |
+| `GET .../reviews/{review_id}/findings` | Review findings |
+| `GET .../findings/{finding_id}/evidence` | Finding evidence |
+| `GET .../knowledge` | Project knowledge |
 
 The adapter forwards only the upstream status, body and a small allowlist of safe response headers. PEA remains responsible for authorization, storage-key redaction, content integrity and no-store behavior.
 
