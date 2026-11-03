@@ -1,0 +1,54 @@
+name: Rust and UI verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/web-server/**'
+      - 'crates/web-pages/**'
+      - 'crates/web-assets/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/web-server/**'
+      - 'crates/web-pages/**'
+      - 'crates/web-assets/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Compile web server and its UI dependencies
+        run: cargo check -p web-server --locked
+  web-assets:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crates/web-assets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: crates/web-assets/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build browser assets
+        run: npm run build
