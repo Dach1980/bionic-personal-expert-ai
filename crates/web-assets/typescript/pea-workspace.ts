@@ -114,12 +114,12 @@ export function peaWorkspace(): void {
         setStatus(`Loaded ${documents.length} document(s).`);
     };
 
-    const renderVersions = async (document: JsonRecord): Promise<void> => {
+    const renderVersions = async (doc: JsonRecord): Promise<void> => {
         if (!contentHost) return;
         contentHost.replaceChildren();
-        if (breadcrumb) breadcrumb.textContent = `${selectedProject?.name || "Project"} / ${document.title || "Document"}`;
+        if (breadcrumb) breadcrumb.textContent = `${selectedProject?.name || "Project"} / ${doc.title || "Document"}`;
         setStatus("Loading immutable document versions…");
-        const versions = await api(`${projectBase()}/documents/${encodeURIComponent(document.id)}/versions`) as JsonRecord[];
+        const versions = await api(`${projectBase()}/documents/${encodeURIComponent(doc.id)}/versions`) as JsonRecord[];
         if (!versions.length) {
             showEmpty(contentHost, "No uploaded versions are available.");
             return;
@@ -128,19 +128,19 @@ export function peaWorkspace(): void {
             const row = element("div", "rounded-lg border border-base-300 p-3");
             row.append(element("div", "font-medium", version.original_filename || version.id));
             row.append(element("div", "text-xs text-base-content/60 mt-1", `Version status: ${version.status || "unknown"} · ${version.uploaded_at || ""}`));
-            row.append(button("Inspect version", () => renderVersion(document, version)));
+            row.append(button("Inspect version", () => renderVersion(doc, version)));
             contentHost.append(row);
         });
         setStatus(`Loaded ${versions.length} version(s).`);
     };
 
-    const renderVersion = async (document: JsonRecord, version: JsonRecord): Promise<void> => {
+    const renderVersion = async (doc: JsonRecord, version: JsonRecord): Promise<void> => {
         if (!contentHost || !previewHost) return;
         contentHost.replaceChildren();
         previewHost.replaceChildren();
-        if (breadcrumb) breadcrumb.textContent = `${selectedProject?.name || "Project"} / ${document.title || "Document"} / ${version.original_filename || "Version"}`;
+        if (breadcrumb) breadcrumb.textContent = `${selectedProject?.name || "Project"} / ${doc.title || "Document"} / ${version.original_filename || "Version"}`;
         setStatus("Loading source fragments and rendered pages…");
-        const docPath = `/documents/${encodeURIComponent(document.id)}/versions/${encodeURIComponent(version.id)}`;
+        const docPath = `/documents/${encodeURIComponent(doc.id)}/versions/${encodeURIComponent(version.id)}`;
         const [fragments, artifacts] = await Promise.all([
             api(`${projectBase()}${docPath}/source-fragments`) as Promise<JsonRecord[]>,
             api(`${projectBase()}${docPath}/artifacts`) as Promise<JsonRecord[]>,
