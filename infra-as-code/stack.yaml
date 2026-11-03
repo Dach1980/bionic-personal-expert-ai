@@ -17,6 +17,18 @@ spec:
           expose_db_port: 30001
           danger_override_password: testpassword
       services:
+        web:
+          env:
+            - name: LOGOUT_URL
+              value: "/oidc/realms/bionic-gpt/protocol/openid-connect/logout"
+            - name: OIDC_ISSUER
+              value: "http://localhost:30000/oidc/realms/bionic-gpt"
+            - name: OIDC_AUDIENCE
+              value: "pea-api"
+            - name: OIDC_JWKS_URL
+              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/certs"
+            - name: PEA_API_BASE_URL
+              value: "http://host.docker.internal:8000"
         integration-simulator:
           image: ghcr.io/bionic-gpt/integration-simulator:1.13.4
           port: 8080
@@ -25,11 +37,33 @@ spec:
         oidc:
           # Required by keycloak for OIDC. OIDC requires a stable redirect URL.
           hostname-url: https://platform.bionic-gpt.com
+      services:
+        web:
+          env:
+            - name: LOGOUT_URL
+              value: "/oidc/realms/bionic-gpt/protocol/openid-connect/logout"
+            - name: OIDC_ISSUER
+              value: "https://platform.bionic-gpt.com/oidc/realms/bionic-gpt"
+            - name: OIDC_AUDIENCE
+              value: "pea-api"
+            - name: OIDC_JWKS_URL
+              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/certs"
     prod:
       components:
         oidc:
           # Required by keycloak for OIDC. OIDC requires a stable redirect URL.
           hostname-url: https://app.bionic-gpt.com
+      services:
+        web:
+          env:
+            - name: LOGOUT_URL
+              value: "/oidc/realms/bionic-gpt/protocol/openid-connect/logout"
+            - name: OIDC_ISSUER
+              value: "https://app.bionic-gpt.com/oidc/realms/bionic-gpt"
+            - name: OIDC_AUDIENCE
+              value: "pea-api"
+            - name: OIDC_JWKS_URL
+              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/certs"
   services:
     web:
       image: ghcr.io/bionic-gpt/bionicgpt:1.13.4
