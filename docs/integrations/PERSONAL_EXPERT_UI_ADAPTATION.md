@@ -86,3 +86,61 @@ Do not expose navigation destinations until their backend/API contracts exist. I
 ## Explicitly out of scope for the first UI pass
 
 Do not rewrite the agent loop, tool dispatcher, sandbox, authentication, database schema, RAG ingestion or model-provider implementation as part of visual branding. These areas require separate design and regression testing.
+
+
+## Current UI implementation — 2026-11-03
+
+The first navigation and empty-chat adaptation pass is committed on `main`.
+
+### Navigation mapping
+
+| Personal Expert AI section | Current implementation | Availability |
+|---|---|---|
+| Projects | Existing Bionic project list and project routes | Active, protected by existing project RBAC |
+| Documents | Reserved navigation item | Disabled until the Personal Expert API adapter and document list view are connected |
+| Dialogues | Existing console route for a new dialogue and Bionic history route | Active, protected by existing chat/history RBAC |
+| Reviews | Reserved navigation item | Disabled until review and finding APIs are connected |
+| Knowledge Base | Reserved navigation item | Disabled until Personal Expert AI knowledge/search APIs are connected |
+| Skills | Existing Bionic Skills route | Active, protected by existing chat permission |
+| Settings | Existing Bionic administration entry point | Visible only to users who already have the corresponding administration permission |
+
+The old Bionic Context group has been replaced with a Personal Expert AI Workspace group. Projects are displayed first. The reserved entries have no destination and are marked disabled; they must not be linked to Bionic Datasets or other semantically different pages.
+
+### Empty chat
+
+The empty state now introduces Personal Expert AI and describes project exploration, evidence-based documentation review and source traceability. The existing prompt form, submit action, conversation stream, stop/cancel control, conversation history and MCP app panel are left intact. This is a source-level UI change; a successful Rust build and browser smoke test have not yet been recorded.
+
+### Document and evidence cards — binding contract
+
+Cards must be rendered from Personal Expert AI API responses, not Bionic Dataset/Document records. The UI adapter must map the following fields:
+
+**Document card**
+- `document_id`, `project_id`, `title`, `file_name`, `media_type`
+- current `document_version_id`, version label/number and processing status
+- page/sheet count only when supplied by extraction metadata
+- a UI-owned document-view URL carrying the document and selected version identifiers
+
+**Evidence card**
+- `fragment_id`, `document_version_id`, document title and version
+- safe excerpt returned by the backend
+- typed locator: page, bounding box, sheet, table, row/cell or text anchor
+- a UI-owned deep link carrying the fragment and immutable version identifiers
+
+**Navigation behavior**
+1. A page locator opens the exact page in the selected document version and applies the available bounding-box highlight.
+2. A spreadsheet locator opens the named sheet and selected table/range or cell.
+3. A text locator opens the fragment in its source context and highlights the matching excerpt.
+4. Every viewer request is resolved through the authenticated Personal Expert AI API. The browser never receives a storage path or direct object-store credential.
+5. If a locator cannot be resolved, show the excerpt and source metadata with an explicit “location unavailable” state; never silently redirect to page 1.
+
+The API specification currently defines the relevant resource families under `/api/v1/projects/{project_id}/documents`, `/api/v1/documents/{document_id}/versions`, `/api/v1/source-fragments/{fragment_id}`, `/api/v1/source-fragments/{fragment_id}/preview`, `/api/v1/projects/{project_id}/knowledge` and `/api/v1/findings/{finding_id}/evidence`. These are target contracts: the adapter must check actual backend implementation and OpenAPI before enabling the navigation items.
+
+### Next implementation gates
+
+1. Verify current backend endpoints and publish/validate OpenAPI for project/document/version/fragment/knowledge/review/evidence reads.
+2. Implement a typed Personal Expert API adapter in Bionic, using the existing authenticated user session and server-side tenant/project scope. Never forward browser-supplied tenant scope as authorization.
+3. Add document list/detail and source viewer routes, then connect the document/evidence cards to those routes.
+4. Add contract tests for access denial across projects/tenants, immutable version resolution, locator variants and missing source files.
+5. Run `cargo fmt --check`, `cargo test -p web-pages` (or the repository's documented equivalent), full build, and browser tests for login, chat submit, SSE streaming, stop/cancel, history, and source navigation.
+
+Do not enable Documents, Reviews or Knowledge Base merely because the navigation labels exist. Enable each only after its API contract, authorization and end-to-end source navigation tests pass.
