@@ -21,6 +21,7 @@ const JWKS_CACHE_TTL: Duration = Duration::from_secs(300);
 pub struct Jwt {
     pub sub: String,
     pub email: String,
+    pub tenant_id: String,
     pub given_name: Option<String>,
     pub family_name: Option<String>,
     #[serde(skip)]
@@ -80,6 +81,7 @@ impl Audience {
 struct JwtClaims {
     sub: String,
     email: String,
+    tenant_id: String,
     given_name: Option<String>,
     family_name: Option<String>,
     exp: u64,
@@ -179,6 +181,7 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
         || !claims.aud.contains(&audience)
         || claims.sub.trim().is_empty()
         || claims.email.trim().is_empty()
+        || uuid::Uuid::parse_str(&claims.tenant_id).is_err()
         || claims.exp <= now.saturating_sub(leeway)
         || claims.iat > now.saturating_add(leeway)
         || claims.exp <= claims.iat
@@ -190,6 +193,7 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
     Ok(Jwt {
         sub: claims.sub,
         email: claims.email,
+        tenant_id: claims.tenant_id,
         given_name: claims.given_name,
         family_name: claims.family_name,
         access_token: token.to_string(),
