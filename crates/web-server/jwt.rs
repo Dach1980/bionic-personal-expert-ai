@@ -105,7 +105,13 @@ async fn load_jwks(url: &str, force_refresh: bool) -> Result<JwkSet, ()> {
     }
 
     // The URL is fixed deployment configuration, never supplied by the request.
-    let jwks = reqwest::get(url)
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|_| ())?;
+    let jwks = client
+        .get(url)
+        .send()
         .await
         .map_err(|_| ())?
         .error_for_status()
