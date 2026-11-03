@@ -172,3 +172,14 @@ A static, synthetic UI preview has been added at `demo/index.html`, with a GitHu
 This preview is intentionally disconnected from FastAPI, PostgreSQL, JWT authentication, Bionic server routes and Agent Runtime. All displayed records and sample assistant responses are fictional. It is a design review surface, not a deployed or functional Personal Expert AI instance.
 
 To enable deployment, set repository Settings → Pages → Build and deployment → Source to **GitHub Actions**. The preview URL will be `https://dach1980.github.io/bionic-personal-expert-ai/` once the Pages workflow succeeds.
+
+
+### CI evidence after backend API additions
+
+The Personal Expert AI PostgreSQL 16 workflow completed successfully for the source-fragment preview route and OpenAPI registration commit:
+- Alembic upgrade, downgrade and re-upgrade: passed
+- ORM/database schema parity: passed
+- PostgreSQL integration and full pytest suite: 86 passed
+- Ruff lint: passed
+
+This validates the backend API/schema and current test suite. It does not yet validate a running Bionic-to-Personal-Expert-AI authenticated session, because the trusted identity bridge is still pending.
