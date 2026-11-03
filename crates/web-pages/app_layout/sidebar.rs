@@ -13,45 +13,48 @@ pub fn render(params: &SidebarParams, labels: &SidebarLabels) -> Element {
     let setup_required = params.setup_required;
 
     rsx!(
-        if can_view_chats || can_view_chat_history {
-            NavGroup {
-                heading: "Work",
-                content:  rsx!(
-                    if can_view_chats {
-                        NavItem {
-                            id: SideBar::Console.to_string(),
-                            selected_item_id: selected_item.clone(),
-                            href: crate::routes::console::Index { team_id: team_id.clone() },
-                            icon: nav_service_requests_svg.name,
-                            title: "Chat",
-                            disabled: setup_required
-                        }
-                    }
-                    if can_view_chat_history {
-                        NavItem {
-                            id: SideBar::History.to_string(),
-                            selected_item_id: selected_item.clone(),
-                            href: crate::routes::history::Index { team_id: team_id.clone() },
-                            icon: nav_history_svg.name,
-                            title: history_label.clone(),
-                            disabled: setup_required
-                        }
-                        NavItem {
-                            id: SideBar::ScheduledTasks.to_string(),
-                            selected_item_id: selected_item.clone(),
-                            href: crate::routes::scheduled_tasks::Index { team_id: team_id.clone() },
-                            icon: nav_history_svg.name,
-                            title: "Scheduled",
-                            disabled: setup_required
-                        }
-                    }
-                )
+        // Projects remain backed by Bionic's existing project routes and RBAC.
+        if rbac.can_manage_projects() {
+            super::project_sidebar::ProjectSidebar {
+                team_id: team_id.clone(),
+                projects: rbac.projects.clone(),
+                selected_project_id: params.selected_project_id,
+                index_selected: params.selected_item == SideBar::Projects
+                    && params.selected_project_id.is_none(),
+                disabled: setup_required,
             }
         }
-        if can_view_chats || rbac.can_view_datasets() || rbac.can_view_integrations() {
+
+        if can_view_chats || can_view_chat_history || rbac.can_manage_projects() {
             NavGroup {
-                heading: "Context",
-                content:  rsx!(
+                heading: "Workspace",
+                content: rsx!(
+                    // These destinations are intentionally disabled until the
+                    // Personal Expert AI API adapter supplies tenant-scoped data.
+                    NavItem {
+                        id: SideBar::Documents.to_string(),
+                        selected_item_id: selected_item.clone(),
+                        href: String::new(),
+                        icon: nav_ccsds_data_svg.name,
+                        title: "Documents",
+                        disabled: true
+                    }
+                    NavItem {
+                        id: SideBar::Reviews.to_string(),
+                        selected_item_id: selected_item.clone(),
+                        href: String::new(),
+                        icon: nav_audit_svg.name,
+                        title: "Reviews",
+                        disabled: true
+                    }
+                    NavItem {
+                        id: SideBar::KnowledgeBase.to_string(),
+                        selected_item_id: selected_item.clone(),
+                        href: String::new(),
+                        icon: nav_ccsds_data_svg.name,
+                        title: "Knowledge Base",
+                        disabled: true
+                    }
                     if can_view_chats {
                         NavItem {
                             id: SideBar::Skills.to_string(),
@@ -62,37 +65,35 @@ pub fn render(params: &SidebarParams, labels: &SidebarLabels) -> Element {
                             disabled: setup_required
                         }
                     }
-                    if rbac.can_view_datasets() {
+                )
+            }
+        }
+
+        if can_view_chats || can_view_chat_history {
+            NavGroup {
+                heading: "Dialogues",
+                content: rsx!(
+                    if can_view_chats {
                         NavItem {
-                            id: SideBar::Datasets.to_string(),
+                            id: SideBar::Console.to_string(),
                             selected_item_id: selected_item.clone(),
-                            href: crate::routes::datasets::Index { team_id: team_id.clone() },
-                            icon: nav_ccsds_data_svg.name,
-                            title: "Datasets",
+                            href: crate::routes::console::Index { team_id: team_id.clone() },
+                            icon: nav_service_requests_svg.name,
+                            title: "New dialogue",
                             disabled: setup_required
                         }
                     }
-                    if rbac.can_view_integrations() {
+                    if can_view_chat_history {
                         NavItem {
-                            id: SideBar::Integrations.to_string(),
+                            id: SideBar::History.to_string(),
                             selected_item_id: selected_item.clone(),
-                            href: crate::routes::integrations::Index { team_id: team_id.clone() },
-                            icon: nav_audit_svg.name,
-                            title: "Integrations",
+                            href: crate::routes::history::Index { team_id: team_id.clone() },
+                            icon: nav_history_svg.name,
+                            title: history_label,
                             disabled: setup_required
                         }
                     }
                 )
-            }
-        }
-        if rbac.can_manage_projects() {
-            super::project_sidebar::ProjectSidebar {
-                team_id: team_id.clone(),
-                projects: rbac.projects.clone(),
-                selected_project_id: params.selected_project_id,
-                index_selected: params.selected_item == SideBar::Projects
-                    && params.selected_project_id.is_none(),
-                disabled: setup_required,
             }
         }
     )
