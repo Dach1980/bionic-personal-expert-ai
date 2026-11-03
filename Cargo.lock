@@ -7986,6 +7986,7 @@ dependencies = [
  "validator",
  "web-pages",
  "zip",
+ "ring 0.17.8",
 ]
 
 [[package]]
