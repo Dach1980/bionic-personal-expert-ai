@@ -111,6 +111,7 @@ async fn main() {
         .merge(handlers::model_requests::routes())
         .merge(handlers::providers::routes())
         .merge(handlers::pipelines::routes())
+        .merge(handlers::pea::routes())
         .merge(handlers::profile::routes())
         .merge(handlers::projects::routes())
         .merge(handlers::rate_limits::routes())
