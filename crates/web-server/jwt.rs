@@ -110,7 +110,7 @@ async fn load_jwks(url: &str, force_refresh: bool) -> Result<JwkSet, ()> {
         .map_err(|_| ())?
         .json::<JwkSet>()
         .await
-        .map_err(|_|)?;
+        .map_err(|_| ())?;
 
     let mut cached = cache.write().await;
     *cached = Some((Instant::now(), jwks.clone()));
