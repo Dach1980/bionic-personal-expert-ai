@@ -259,9 +259,7 @@ async fn list_findings(
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
     proxy_get(
-        format!(
-            "/api/v1/tenants/{tenant_id}/projects/{project_id}/reviews/{review_id}/findings"
-        ),
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/reviews/{review_id}/findings"),
         user,
     )
     .await
@@ -272,9 +270,7 @@ async fn list_evidence(
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
     proxy_get(
-        format!(
-            "/api/v1/tenants/{tenant_id}/projects/{project_id}/findings/{finding_id}/evidence"
-        ),
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/findings/{finding_id}/evidence"),
         user,
     )
     .await
