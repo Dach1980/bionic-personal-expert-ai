@@ -82,7 +82,10 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
         )
     })? {
         if body.len().saturating_add(chunk.len()) > MAX_ADAPTER_RESPONSE_BYTES {
-            return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+            return Err((
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "PEA response exceeds adapter limit",
+            ));
         }
         body.extend_from_slice(&chunk);
     }
@@ -218,7 +221,13 @@ async fn get_document_version(
 }
 
 async fn get_source_fragment(
-    Path((tenant_id, project_id, document_id, version_id, fragment_id)): Path<(Uuid, Uuid, Uuid, Uuid, Uuid)>,
+    Path((tenant_id, project_id, document_id, version_id, fragment_id)): Path<(
+        Uuid,
+        Uuid,
+        Uuid,
+        Uuid,
+        Uuid,
+    )>,
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
     proxy_get(
