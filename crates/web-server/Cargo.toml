@@ -33,7 +33,7 @@ validator = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 rand.workspace = true
 http-body-util = "0.1"
-jsonwebtoken = "9"
+ring = "=0.17.8"
 
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
