@@ -144,3 +144,31 @@ The API specification currently defines the relevant resource families under `/a
 5. Run `cargo fmt --check`, `cargo test -p web-pages` (or the repository's documented equivalent), full build, and browser tests for login, chat submit, SSE streaming, stop/cancel, history, and source navigation.
 
 Do not enable Documents, Reviews or Knowledge Base merely because the navigation labels exist. Enable each only after its API contract, authorization and end-to-end source navigation tests pass.
+
+
+## Integration progress — 2026-11-03
+
+### Personal Expert AI backend read API
+
+Implemented in the Personal Expert AI repository:
+- tenant-scoped document version list and detail;
+- version-scoped SourceFragment list and detail;
+- version-scoped rendered-page artifact metadata;
+- authenticated rendered-page image streaming with checksum/size verification;
+- project-scoped KnowledgeItem listing.
+
+Storage keys and absolute filesystem paths are removed recursively from browser-facing locators. Rendered-page bytes are exposed only by opaque artifact ID after checking tenant, project, document, immutable version and project membership.
+
+Not yet implemented in the backend: Review, Finding and explicit Evidence domain resources. The current database schema does not contain Review/Finding tables. Do not connect the Reviews navigation to a placeholder or unrelated Bionic audit trail.
+
+### Identity boundary
+
+The current Personal Expert AI API trusts HS256 JWTs from a configured issuer/audience and resolves `sub` to a Personal Expert AI User UUID. Bionic has its own existing user/session model. No verified mapping between those identities has been implemented. A Bionic server-side adapter must not fabricate JWTs, accept tenant IDs as proof of access, or expose a service credential to the browser. The next integration task is a documented trusted identity bridge (or an explicitly provisioned identity mapping) with negative tests for cross-tenant and cross-project access.
+
+### GitHub Pages visual preview
+
+A static, synthetic UI preview has been added at `demo/index.html`, with a GitHub Actions Pages deployment workflow at `.github/workflows/pages-demo.yml`. It demonstrates navigation, project/document cards, a chat empty state, source evidence cards, and illustrative PDF/table deep-link interactions.
+
+This preview is intentionally disconnected from FastAPI, PostgreSQL, JWT authentication, Bionic server routes and Agent Runtime. All displayed records and sample assistant responses are fictional. It is a design review surface, not a deployed or functional Personal Expert AI instance.
+
+To enable deployment, set repository Settings → Pages → Build and deployment → Source to **GitHub Actions**. The preview URL will be `https://dach1980.github.io/bionic-personal-expert-ai/` once the Pages workflow succeeds.
