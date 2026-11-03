@@ -1,12 +1,42 @@
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Extension, Path, Query},
     http::{header, HeaderValue, Response, StatusCode},
+    response::Html,
     routing::get,
     Router,
 };
-use crate::Jwt;
+use axum_extra::routing::RouterExt;
+use db::{authz, Pool};
+use serde::Deserialize;
+use crate::{locale::Locale, CustomError, Jwt};
 use uuid::Uuid;
+
+#[derive(Deserialize, Default)]
+struct WorkspaceTab {
+    tab: Option<String>,
+}
+
+pub async fn index(
+    web_pages::routes::pea::Index { team_id }: web_pages::routes::pea::Index,
+    Query(query): Query<WorkspaceTab>,
+    locale: Locale,
+    current_user: Jwt,
+    Extension(pool): Extension<Pool>,
+) -> Result<Html<String>, CustomError> {
+    let tenant_id = current_user.tenant_id.clone();
+    let mut client = pool.get().await?;
+    let transaction = client.transaction().await?;
+    let (rbac, _team_id_num) =
+        authz::get_permisisons(&transaction, &current_user.into(), &team_id).await?;
+    let tab = match query.tab.as_deref() {
+        Some("reviews") => "reviews",
+        Some("knowledge") => "knowledge",
+        _ => "documents",
+    };
+    let html = web_pages::pea::page(rbac, team_id, tenant_id, tab, locale.as_str());
+    Ok(Html(html))
+}
 
 async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
     let base_url = std::env::var("PEA_API_BASE_URL")
@@ -208,6 +238,7 @@ async fn list_evidence(
 
 pub fn routes() -> Router {
     Router::new()
+        .typed_get(index)
         .route("/api/pea/tenants/{tenant_id}/projects", get(list_projects))
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents",
