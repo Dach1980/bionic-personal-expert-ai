@@ -20,6 +20,10 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/rust-check.yml'
 
+concurrency:
+  group: rust-ui-verification-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
