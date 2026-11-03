@@ -51,4 +51,4 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
       - name: Build browser assets
-        run: npm run release
+        run: npx parcel build ./index.ts --public-url /auth/static
