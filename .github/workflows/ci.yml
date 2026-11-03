@@ -28,10 +28,10 @@ jobs:
       FORCE_COLOR: 1
     steps:
       - uses: actions/checkout@v7
-      - name: Run Dagger build
+      - name: Run Dagger build and quality checks (no image publication)
         id: dagger
         continue-on-error: true
-        run: cargo run -p dagger-pipeline --release -- all
+        run: cargo run -p dagger-pipeline --release -- pull-request
         env:
           DAGGER_LOG_FORMAT: plain
       - name: Publish quality summary
