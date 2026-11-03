@@ -130,6 +130,44 @@ async fn source_fragment_preview(
     .await
 }
 
+
+async fn get_document_version(
+    Path((tenant_id, project_id, document_id, version_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}"
+        ),
+        user,
+    )
+    .await
+}
+
+async fn get_source_fragment(
+    Path((tenant_id, project_id, document_id, version_id, fragment_id)): Path<(Uuid, Uuid, Uuid, Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/source-fragments/{fragment_id}"
+        ),
+        user,
+    )
+    .await
+}
+
+async fn list_knowledge(
+    Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/knowledge"),
+        user,
+    )
+    .await
+}
+
 pub fn routes() -> Router {
     Router::new()
         .route("/api/pea/tenants/{tenant_id}/projects", get(list_projects))
@@ -152,6 +190,18 @@ pub fn routes() -> Router {
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/artifacts/{artifact_id}/content",
             get(artifact_content),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}",
+            get(get_document_version),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/source-fragments/{fragment_id}",
+            get(get_source_fragment),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/knowledge",
+            get(list_knowledge),
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/source-fragments/{fragment_id}/preview",
