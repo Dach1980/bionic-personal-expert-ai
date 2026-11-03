@@ -88,6 +88,15 @@ pub fn BaseLayout(props: AppLayoutProps) -> Element {
                     div {
                         class: "pb-4 pl-4 pr-2",
                         {props.sidebar_footer}
+                        div {
+                            class: "mt-3 flex items-center gap-2 border-t border-base-300 px-2 pt-3 text-xs text-base-content/60",
+                            img {
+                                width: "20",
+                                height: "20",
+                                src: "{props.fav_icon_src}"
+                            }
+                            span { "Personal Expert AI" }
+                        }
                     }
                 }
                 div {
