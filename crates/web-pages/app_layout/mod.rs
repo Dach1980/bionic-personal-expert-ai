@@ -108,8 +108,8 @@ fn layout(props: LayoutProps, mode: LayoutMode) -> Element {
 
     let history_label = i18n::histories(&locale);
 
-    let app_logo_src = bionic_logo_svg.name.to_string();
-    let app_name = "Bionic".to_string();
+    let app_logo_src = personal_expert_ai_logo_svg.name.to_string();
+    let app_name = "Personal Expert AI".to_string();
 
     let team_id = props.team_id.clone();
     let switch_teams_href = crate::routes::teams::Switch {
