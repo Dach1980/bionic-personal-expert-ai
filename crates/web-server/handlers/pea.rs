@@ -1,7 +1,7 @@
 use axum::{
     body::Body,
     extract::{Extension, Path, Query},
-    http::{header, HeaderValue, Response, StatusCode},
+    http::{header, HeaderName, HeaderValue, Response, StatusCode},
     response::Html,
     routing::get,
     Router,
@@ -84,7 +84,7 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
         header::CONTENT_DISPOSITION,
         header::CACHE_CONTROL,
         header::ETAG,
-        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderName::from_static("x-content-type-options"),
     ] {
         if let Some(value) = headers.get(&name) {
             if let Ok(value) = HeaderValue::from_bytes(value.as_bytes()) {
