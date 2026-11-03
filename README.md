@@ -164,3 +164,10 @@ Contributions are welcome. Start with [CONTRIBUTING.md](https://github.com/bioni
 ## License
 
 Bionic is licensed under the Apache License 2.0.
+
+
+## Personal Expert AI UI preview
+
+A static design preview of the adapted workspace is available in [`demo/index.html`](demo/index.html). It illustrates the Personal Expert AI navigation, project/document overview, chat start screen, evidence cards and sample source viewer interactions.
+
+The preview is synthetic and does not connect to the FastAPI backend, authentication, PostgreSQL or Agent Runtime. To publish it, enable GitHub Pages with **Settings → Pages → Build and deployment → Source → GitHub Actions**. The deployment workflow is [`pages-demo.yml`](.github/workflows/pages-demo.yml); after a successful run the expected URL is https://dach1980.github.io/bionic-personal-expert-ai/.
