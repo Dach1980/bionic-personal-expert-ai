@@ -29,4 +29,3 @@ pub mod system_prompt;
 pub mod team;
 pub mod teams;
 pub mod web_search;
-pub mod pea;
