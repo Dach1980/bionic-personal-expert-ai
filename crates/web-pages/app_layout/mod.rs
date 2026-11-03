@@ -23,6 +23,10 @@ pub enum SideBar {
     AuditTrail,
     Console,
     Datasets,
+    Documents,
+    Dialogues,
+    Reviews,
+    KnowledgeBase,
     DocumentPipelines,
     Guardrails,
     History,
@@ -195,7 +199,7 @@ fn layout(props: LayoutProps, mode: LayoutMode) -> Element {
                         height: "16",
                         src: settings_svg.name
                     }
-                    "Admin Panel"
+                    "Settings"
                 }
             }
             {profile_section}
