@@ -819,7 +819,6 @@ pub mod web_search {
     }
 }
 
-
 pub mod pea {
     use axum_extra::routing::TypedPath;
     use serde::Deserialize;
