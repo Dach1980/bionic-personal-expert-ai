@@ -29,31 +29,29 @@ pub fn render(params: &SidebarParams, labels: &SidebarLabels) -> Element {
             NavGroup {
                 heading: "Workspace",
                 content: rsx!(
-                    // These destinations are intentionally disabled until the
-                    // Personal Expert AI API adapter supplies tenant-scoped data.
                     NavItem {
                         id: SideBar::Documents.to_string(),
                         selected_item_id: selected_item.clone(),
-                        href: String::new(),
+                        href: format!("{}?tab=documents", crate::routes::pea::Index { team_id: team_id.clone() }),
                         icon: nav_ccsds_data_svg.name,
                         title: "Documents",
-                        disabled: true
+                        disabled: setup_required
                     }
                     NavItem {
                         id: SideBar::Reviews.to_string(),
                         selected_item_id: selected_item.clone(),
-                        href: String::new(),
+                        href: format!("{}?tab=reviews", crate::routes::pea::Index { team_id: team_id.clone() }),
                         icon: nav_audit_svg.name,
                         title: "Reviews",
-                        disabled: true
+                        disabled: setup_required
                     }
                     NavItem {
                         id: SideBar::KnowledgeBase.to_string(),
                         selected_item_id: selected_item.clone(),
-                        href: String::new(),
+                        href: format!("{}?tab=knowledge", crate::routes::pea::Index { team_id: team_id.clone() }),
                         icon: nav_ccsds_data_svg.name,
                         title: "Knowledge Base",
-                        disabled: true
+                        disabled: setup_required
                     }
                     if can_view_chats {
                         NavItem {
