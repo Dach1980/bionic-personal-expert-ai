@@ -168,6 +168,44 @@ async fn list_knowledge(
     .await
 }
 
+
+async fn list_reviews(
+    Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/reviews"),
+        user,
+    )
+    .await
+}
+
+async fn list_findings(
+    Path((tenant_id, project_id, review_id)): Path<(Uuid, Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/reviews/{review_id}/findings"
+        ),
+        user,
+    )
+    .await
+}
+
+async fn list_evidence(
+    Path((tenant_id, project_id, finding_id)): Path<(Uuid, Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/findings/{finding_id}/evidence"
+        ),
+        user,
+    )
+    .await
+}
+
 pub fn routes() -> Router {
     Router::new()
         .route("/api/pea/tenants/{tenant_id}/projects", get(list_projects))
@@ -202,6 +240,18 @@ pub fn routes() -> Router {
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/knowledge",
             get(list_knowledge),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/reviews",
+            get(list_reviews),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/reviews/{review_id}/findings",
+            get(list_findings),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/findings/{finding_id}/evidence",
+            get(list_evidence),
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/source-fragments/{fragment_id}/preview",
