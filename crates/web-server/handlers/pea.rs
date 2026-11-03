@@ -204,7 +204,6 @@ async fn source_fragment_preview(
     .await
 }
 
-
 async fn get_document_version(
     Path((tenant_id, project_id, document_id, version_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
     user: Jwt,
@@ -241,7 +240,6 @@ async fn list_knowledge(
     )
     .await
 }
-
 
 async fn list_reviews(
     Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
