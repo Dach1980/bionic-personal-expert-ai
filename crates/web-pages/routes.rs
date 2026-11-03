@@ -818,3 +818,15 @@ pub mod web_search {
         pub id: i32,
     }
 }
+
+
+pub mod pea {
+    use axum_extra::routing::TypedPath;
+    use serde::Deserialize;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/o/{team_id}/pea")]
+    pub struct Index {
+        pub team_id: String,
+    }
+}
