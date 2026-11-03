@@ -1,3 +1,4 @@
+use crate::{locale::Locale, CustomError, Jwt};
 use axum::{
     body::Body,
     extract::{Extension, Path, Query},
@@ -9,7 +10,6 @@ use axum::{
 use axum_extra::routing::RouterExt;
 use db::{authz, Pool};
 use serde::Deserialize;
-use crate::{locale::Locale, CustomError, Jwt};
 use uuid::Uuid;
 
 #[derive(Deserialize, Default)]
@@ -46,7 +46,12 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(45))
         .build()
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+        .map_err(|_| {
+            (
+                StatusCode::BAD_GATEWAY,
+                "PEA API client could not be initialized",
+            )
+        })?;
     let mut upstream = client
         .get(url)
         .bearer_auth(user.access_token)
@@ -54,8 +59,8 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
         .await
         .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
 
-    let status = StatusCode::from_u16(upstream.status().as_u16())
-        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let headers = upstream.headers().clone();
     const MAX_ADAPTER_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
     if headers
@@ -64,14 +69,18 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
         .and_then(|value| value.parse::<usize>().ok())
         .is_some_and(|length| length > MAX_ADAPTER_RESPONSE_BYTES)
     {
-        return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "PEA response exceeds adapter limit",
+        ));
     }
     let mut body = Vec::new();
-    while let Some(chunk) = upstream
-        .chunk()
-        .await
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API response could not be read"))?
-    {
+    while let Some(chunk) = upstream.chunk().await.map_err(|_| {
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA API response could not be read",
+        )
+    })? {
         if body.len().saturating_add(chunk.len()) > MAX_ADAPTER_RESPONSE_BYTES {
             return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
         }
@@ -92,9 +101,12 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
             }
         }
     }
-    response
-        .body(Body::from(body))
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA response could not be forwarded"))
+    response.body(Body::from(body)).map_err(|_| {
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA response could not be forwarded",
+        )
+    })
 }
 
 async fn list_projects(
@@ -155,7 +167,13 @@ async fn list_artifacts(
 }
 
 async fn artifact_content(
-    Path((tenant_id, project_id, document_id, version_id, artifact_id)): Path<(Uuid, Uuid, Uuid, Uuid, Uuid)>,
+    Path((tenant_id, project_id, document_id, version_id, artifact_id)): Path<(
+        Uuid,
+        Uuid,
+        Uuid,
+        Uuid,
+        Uuid,
+    )>,
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
     proxy_get(
@@ -168,7 +186,13 @@ async fn artifact_content(
 }
 
 async fn source_fragment_preview(
-    Path((tenant_id, project_id, document_id, version_id, fragment_id)): Path<(Uuid, Uuid, Uuid, Uuid, Uuid)>,
+    Path((tenant_id, project_id, document_id, version_id, fragment_id)): Path<(
+        Uuid,
+        Uuid,
+        Uuid,
+        Uuid,
+        Uuid,
+    )>,
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
     proxy_get(
