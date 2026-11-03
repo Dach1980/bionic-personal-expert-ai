@@ -57,8 +57,8 @@ struct Jwk {
     #[serde(rename = "use")]
     use_: Option<String>,
     alg: Option<String>,
-    n: String,
-    e: String,
+    n: Option<String>,
+    e: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -166,8 +166,12 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
     }
     let jwk = jwk.ok_or(())?;
 
-    let modulus = URL_SAFE_NO_PAD.decode(&jwk.n).map_err(|_| ())?;
-    let exponent = URL_SAFE_NO_PAD.decode(&jwk.e).map_err(|_| ())?;
+    let modulus = URL_SAFE_NO_PAD
+        .decode(jwk.n.as_deref().ok_or(())?)
+        .map_err(|_| ())?;
+    let exponent = URL_SAFE_NO_PAD
+        .decode(jwk.e.as_deref().ok_or(())?)
+        .map_err(|_| ())?;
     let signature = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_| ())?;
     let signing_input = format!("{}.{}", parts[0], parts[1]);
     RsaPublicKeyComponents {
