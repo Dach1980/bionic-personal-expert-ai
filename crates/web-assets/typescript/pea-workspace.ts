@@ -237,8 +237,8 @@ export function peaWorkspace(): void {
         }
         items.forEach((item) => {
             const card = element("div", "rounded-lg border border-base-300 p-3");
-            card.append(element("div", "font-medium", item.title || item.name || item.id || "Knowledge item"));
-            const summary = item.summary || item.content || item.description || "";
+            card.append(element("div", "font-medium", item.canonical_key || item.kind || item.id || "Knowledge item"));
+            const summary = item.canonical_value ? JSON.stringify(item.canonical_value, null, 2) : (item.summary || item.content || item.description || "");
             card.append(element("p", "text-sm text-base-content/70 mt-1 whitespace-pre-wrap", String(summary).slice(0, 2000)));
             contentHost.append(card);
         });
