@@ -27,6 +27,7 @@ import { fileUpload } from './typescript/console/file-upload';
 import { examplePrompts } from './typescript/console/example-prompts';
 import { initInstantPage } from './typescript/instant-page';
 import { mcpApps } from './typescript/console/mcp-apps';
+import { peaWorkspace } from './typescript/pea-workspace';
 
 // Set everything up
 function loadEverything() {
@@ -51,6 +52,7 @@ function loadEverything() {
     fileUpload()
     initInstantPage()
     mcpApps()
+    peaWorkspace()
 
     // Apply dark or light mode
     setTheme()
