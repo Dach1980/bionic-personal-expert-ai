@@ -30,12 +30,29 @@ permissions:
 jobs:
   rust:
     runs-on: ubuntu-latest
+    container:
+      # Same build image used by the upstream Dagger pipeline; includes Rust,
+      # Cornucopia and dbmate required by crates/db/build.rs.
+      image: purtontech/rust-on-nails-devcontainer:1.3.46
+      options: --user root
+    services:
+      postgres:
+        image: ankane/pgvector
+        env:
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:testpassword@postgres:5432/postgres?sslmode=disable
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - uses: Swatinem/rust-cache@v2
+      - name: Apply database migrations for Cornucopia query generation
+        run: dbmate --wait --migrations-dir crates/db/migrations up
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Compile web server and its UI dependencies
