@@ -1,6 +1,6 @@
 # Personal Expert AI server-side adapter
 
-The Bionic web server exposes a narrow, server-side adapter under `/api/pea`. Browser code must call Bionic; it must not call the PEA API directly and must never receive PEA credentials.
+The Bionic web server exposes a narrow, server-side adapter under `/api/pea`. The authenticated Bionic workspace is available at `/o/{team_id}/pea`; its Documents, Reviews and Knowledge Base sidebar entries open this workspace. Browser code must call Bionic; it must not call the PEA API directly and must never receive PEA credentials.
 
 ## Authentication and trust boundary
 
@@ -45,3 +45,5 @@ The example `infra-as-code/docker-compose.yml` is not itself an OIDC gateway. Do
 4. injects the actual Keycloak access token into that header over the private app network.
 
 The server-side adapter must remain behind this trust boundary. Never enable the former `DANGER_JWT_OVERRIDE` or trust forwarded user/email headers.
+
+The authenticated workspace page `/o/{team_id}/pea` loads projects, documents, immutable versions, source fragments, rendered page images, reviews, findings, evidence and project knowledge through these same-origin adapter routes. Fragment selection scrolls to the corresponding rendered page when a page locator is available.
