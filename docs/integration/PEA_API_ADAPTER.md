@@ -47,3 +47,21 @@ The example `infra-as-code/docker-compose.yml` is not itself an OIDC gateway. Do
 The server-side adapter must remain behind this trust boundary. Never enable the former `DANGER_JWT_OVERRIDE` or trust forwarded user/email headers.
 
 The authenticated workspace page `/o/{team_id}/pea` loads projects, documents, immutable versions, source fragments, rendered page images, reviews, findings, evidence and project knowledge through these same-origin adapter routes. Fragment selection scrolls to the corresponding rendered page when a page locator is available.
+
+
+## Keycloak realm configuration
+
+The Stack manifest uses the Stack-managed Keycloak realm `bionic-gpt`; do not provision a second identity server. Stack's OIDC component places oauth2-proxy in front of Bionic and creates the realm for the StackApp. The server validates the forwarded access token independently.
+
+In the Bionic realm, add an Audience mapper to the oauth2-proxy client so the **access token** contains `pea-api` in `aud`. Create a Keycloak client with ID `pea-api` as the resource audience. Add a User Attribute mapper for the `tenant_id` user attribute (String, access token On, ID token Off). Set each user attribute to the corresponding PEA tenant UUID. PEA independently checks the user's active membership.
+
+The Stack profiles configure `OIDC_ISSUER`, `OIDC_AUDIENCE` and the internal Keycloak JWKS endpoint. Verify the exact issuer from the realm's `/.well-known/openid-configuration` before deployment.
+
+For UAT and production, provide the private PEA API URL through a Kubernetes secret in the Bionic namespace:
+
+```bash
+kubectl -n bionic-gpt create secret generic pea-api-connection \
+  --from-literal=base_url="http://YOUR_PRIVATE_PEA_API_HOST:8000"
+```
+
+The secret is projected as `PEA_API_BASE_URL` into the Bionic web server. Do not expose the PEA API or its PostgreSQL database publicly. For local development the Stack dev profile uses `host.docker.internal:8000`; verify this route from the Docker Desktop Kubernetes pod before relying on it.
