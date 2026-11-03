@@ -7,7 +7,6 @@ use base64::Engine;
 use db::authz;
 use ring::signature::{RsaPublicKeyComponents, RSA_PKCS1_2048_8192_SHA256};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::{
     env,
     sync::OnceLock,
