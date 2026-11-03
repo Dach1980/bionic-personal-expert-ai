@@ -147,7 +147,10 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
         key.kid == header.kid
             && key.kty == "RSA"
             && key.use_.as_deref().is_none_or(|usage| usage == "sig")
-            && key.alg.as_deref().is_none_or(|algorithm| algorithm == "RS256")
+            && key
+                .alg
+                .as_deref()
+                .is_none_or(|algorithm| algorithm == "RS256")
     });
     if jwk.is_none() {
         jwks = load_jwks(&jwks_url, true).await?;
@@ -155,7 +158,10 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
             key.kid == header.kid
                 && key.kty == "RSA"
                 && key.use_.as_deref().is_none_or(|usage| usage == "sig")
-                && key.alg.as_deref().is_none_or(|algorithm| algorithm == "RS256")
+                && key
+                    .alg
+                    .as_deref()
+                    .is_none_or(|algorithm| algorithm == "RS256")
         });
     }
     let jwk = jwk.ok_or(())?;
@@ -164,13 +170,16 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
     let exponent = URL_SAFE_NO_PAD.decode(&jwk.e).map_err(|_| ())?;
     let signature = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_| ())?;
     let signing_input = format!("{}.{}", parts[0], parts[1]);
-    RsaPublicKeyComponents { n: &modulus, e: &exponent }
-        .verify(
-            &RSA_PKCS1_2048_8192_SHA256,
-            signing_input.as_bytes(),
-            &signature,
-        )
-        .map_err(|_| ())?;
+    RsaPublicKeyComponents {
+        n: &modulus,
+        e: &exponent,
+    }
+    .verify(
+        &RSA_PKCS1_2048_8192_SHA256,
+        signing_input.as_bytes(),
+        &signature,
+    )
+    .map_err(|_| ())?;
 
     let payload = URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_| ())?;
     let claims: JwtClaims = serde_json::from_slice(&payload).map_err(|_| ())?;
@@ -185,7 +194,9 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
         || claims.exp <= now.saturating_sub(leeway)
         || claims.iat > now.saturating_add(leeway)
         || claims.exp <= claims.iat
-        || claims.nbf.is_some_and(|nbf| nbf > now.saturating_add(leeway))
+        || claims
+            .nbf
+            .is_some_and(|nbf| nbf > now.saturating_add(leeway))
     {
         return Err(());
     }
