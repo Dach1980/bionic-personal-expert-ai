@@ -96,19 +96,19 @@ The first navigation and empty-chat adaptation pass is committed on `main`.
 
 | Personal Expert AI section | Current implementation | Availability |
 |---|---|---|
-| Projects | Existing Bionic project list and project routes | Active, protected by existing project RBAC |
-| Documents | Reserved navigation item | Disabled until the Personal Expert API adapter and document list view are connected |
-| Dialogues | Existing console route for a new dialogue and Bionic history route | Active, protected by existing chat/history RBAC |
-| Reviews | Reserved navigation item | Disabled until review and finding APIs are connected |
-| Knowledge Base | Reserved navigation item | Disabled until Personal Expert AI knowledge/search APIs are connected |
+| Projects | PEA project list loaded through the authenticated server adapter | Active; PEA checks tenant and project membership |
+| Documents | PEA document list, immutable versions, SourceFragments and rendered-page artifacts | Active; source bytes are served only through authenticated PEA artifact routes |
+| Dialogues | Existing Bionic console route and conversation history | Active; uses Bionic Agent Runtime and chat permissions |
+| Reviews | PEA Review list with Finding and Evidence drill-down | Active for reading; domain write APIs exist in PEA, but the Bionic adapter is deliberately read-only at this stage |
+| Knowledge Base | PEA project KnowledgeItem listing | Active; PEA checks project membership |
 | Skills | Existing Bionic Skills route | Active, protected by existing chat permission |
 | Settings | Existing Bionic administration entry point | Visible only to users who already have the corresponding administration permission |
 
-The old Bionic Context group has been replaced with a Personal Expert AI Workspace group. Projects are displayed first. The reserved entries have no destination and are marked disabled; they must not be linked to Bionic Datasets or other semantically different pages.
+The old Bionic Context group has been replaced with a Personal Expert AI Workspace group. Documents, Reviews and Knowledge Base open the authenticated PEA workspace at `/o/{team_id}/pea` with a tab selection. They are backed by live PEA API responses, not Bionic Datasets or fabricated records.
 
 ### Empty chat
 
-The empty state now introduces Personal Expert AI and describes project exploration, evidence-based documentation review and source traceability. The existing prompt form, submit action, conversation stream, stop/cancel control, conversation history and MCP app panel are left intact. This is a source-level UI change; a successful Rust build and browser smoke test have not yet been recorded.
+The empty state introduces Personal Expert AI and describes project exploration, evidence-based documentation review and source traceability. The existing prompt form, submit action, conversation stream, stop/cancel control, conversation history and MCP app panel remain intact. The latest completed baseline CI built the Rust web server and browser assets successfully; a new JWT-focused Rust test suite is being validated separately. Live browser testing against a running Keycloak/PEA stack is still outstanding.
 
 ### Document and evidence cards — binding contract
 
