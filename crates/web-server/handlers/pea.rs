@@ -1,6 +1,7 @@
 use crate::{locale::Locale, CustomError, Jwt};
 use axum::{
     body::Body,
+    extract::DefaultBodyLimit,
     extract::{Extension, Json, Multipart, Path, Query},
     http::{header, HeaderMap, HeaderName, HeaderValue, Response, StatusCode},
     response::Html,
@@ -637,7 +638,9 @@ pub fn routes() -> Router {
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions",
-            get(list_versions).post(upload_document_version),
+            get(list_versions)
+                .post(upload_document_version)
+                .layer(DefaultBodyLimit::max(100 * 1024 * 1024)),
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/processing-runs",
