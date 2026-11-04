@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'crates/web-server/**'
+      - 'crates/agent-harness/**'
       - 'crates/web-pages/**'
       - 'crates/web-assets/**'
       - 'Cargo.toml'
@@ -63,6 +64,8 @@ jobs:
         run: cargo check -p web-server --locked
       - name: Run web server tests
         run: cargo test -p web-server --locked
+      - name: Run Agent Runtime authentication and dialogue tests
+        run: cargo test -p agent-harness --locked
   web-assets:
     runs-on: ubuntu-latest
     defaults:
