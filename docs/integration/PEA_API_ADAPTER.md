@@ -4,6 +4,8 @@ The Bionic web server exposes a narrow, server-side adapter under `/api/pea`. Th
 
 ## Authentication and trust boundary
 
+The JWT extractor is implemented once in `agent-harness` and re-exported by `web-server`; therefore ordinary Bionic routes, the PEA API adapter and `/completions/{chat_id}` use the same Keycloak RS256/JWKS verification. The legacy `X-Forwarded-User` / `X-Forwarded-Email` fallback and `DANGER_JWT_OVERRIDE` bypass are not accepted. The gateway must still strip client-supplied `X-Forwarded-Access-Token` and inject the actual access token over the private service path.
+
 - Bionic's `Jwt` extractor accepts only `X-Forwarded-Access-Token` from the configured OIDC gateway.
 - The token is verified in the Rust server using RS256, a configured Keycloak JWKS endpoint, exact issuer and audience, and time claims.
 - The original verified bearer token is retained only in server memory and forwarded to PEA by the adapter. It is skipped during serialization.
