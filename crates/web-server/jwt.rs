@@ -311,63 +311,53 @@ mod tests {
     fn claims_require_the_configured_issuer_audience_and_valid_time_window() {
         let now = 1_800_000_000;
         let claims = test_claims(now);
-        assert!(
-            validate_claims(
-                &claims,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_ok()
-        );
+        assert!(validate_claims(
+            &claims,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_ok());
 
         let mut wrong_issuer = test_claims(now);
         wrong_issuer.iss = "https://attacker.example/realm".to_string();
-        assert!(
-            validate_claims(
-                &wrong_issuer,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_err()
-        );
+        assert!(validate_claims(
+            &wrong_issuer,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_err());
 
         let mut wrong_audience = test_claims(now);
         wrong_audience.aud = Audience::Single("another-api".to_string());
-        assert!(
-            validate_claims(
-                &wrong_audience,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_err()
-        );
+        assert!(validate_claims(
+            &wrong_audience,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_err());
 
         let mut expired = test_claims(now);
         expired.exp = now - 60;
-        assert!(
-            validate_claims(
-                &expired,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_err()
-        );
+        assert!(validate_claims(
+            &expired,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_err());
 
         let mut malformed_tenant = test_claims(now);
         malformed_tenant.tenant_id = "not-a-uuid".to_string();
-        assert!(
-            validate_claims(
-                &malformed_tenant,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_err()
-        );
+        assert!(validate_claims(
+            &malformed_tenant,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_err());
     }
 
     #[test]
@@ -375,26 +365,22 @@ mod tests {
         let now = 1_800_000_000;
         let mut future_iat = test_claims(now);
         future_iat.iat = now + 60;
-        assert!(
-            validate_claims(
-                &future_iat,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_err()
-        );
+        assert!(validate_claims(
+            &future_iat,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_err());
 
         let mut future_nbf = test_claims(now);
         future_nbf.nbf = Some(now + 60);
-        assert!(
-            validate_claims(
-                &future_nbf,
-                "https://sso.example.test/realms/bionic-gpt",
-                "pea-api",
-                now
-            )
-            .is_err()
-        );
+        assert!(validate_claims(
+            &future_nbf,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_err());
     }
 }
