@@ -135,15 +135,16 @@ Cards must be rendered from Personal Expert AI API responses, not Bionic Dataset
 
 The API specification currently defines the relevant resource families under `/api/v1/projects/{project_id}/documents`, `/api/v1/documents/{document_id}/versions`, `/api/v1/source-fragments/{fragment_id}`, `/api/v1/source-fragments/{fragment_id}/preview`, `/api/v1/projects/{project_id}/knowledge` and `/api/v1/findings/{finding_id}/evidence`. These are target contracts: the adapter must check actual backend implementation and OpenAPI before enabling the navigation items.
 
-### Next implementation gates
+### Remaining acceptance gates
 
-1. Verify current backend endpoints and publish/validate OpenAPI for project/document/version/fragment/knowledge/review/evidence reads.
-2. Implement a typed Personal Expert API adapter in Bionic, using the existing authenticated user session and server-side tenant/project scope. Never forward browser-supplied tenant scope as authorization.
-3. Add document list/detail and source viewer routes, then connect the document/evidence cards to those routes.
-4. Add contract tests for access denial across projects/tenants, immutable version resolution, locator variants and missing source files.
-5. Run `cargo fmt --check`, `cargo test -p web-pages` (or the repository's documented equivalent), full build, and browser tests for login, chat submit, SSE streaming, stop/cancel, history, and source navigation.
+1. Start the Stack-managed Keycloak/OIDC gateway, Bionic and PEA together using the documented local dev profile.
+2. Run the Keycloak realm bootstrap script, provision one existing PEA user explicitly and assign only the intended tenant/project memberships.
+3. Verify login and token refresh through the real gateway; confirm client-supplied `X-Forwarded-Access-Token` is stripped and the gateway injects the real access token.
+4. Run browser smoke tests for login/logout, chat submit, SSE streaming, stop/cancel, history, PEA project/document/version loading, page preview and SourceFragment navigation.
+5. Verify unauthorized, unprovisioned, inactive-tenant, cross-tenant and cross-project requests are rejected through the complete Bionic adapter path.
+6. Run a document-grounded dialogue through Bionic Agent Runtime and confirm the answer's source references open the correct immutable document version and source fragment.
 
-Do not enable Documents, Reviews or Knowledge Base merely because the navigation labels exist. Enable each only after its API contract, authorization and end-to-end source navigation tests pass.
+The PEA domain APIs and Bionic read adapter are implemented; these are runtime acceptance tasks, not reasons to enable unrelated placeholder pages.
 
 
 ## Integration progress — 2026-11-03
