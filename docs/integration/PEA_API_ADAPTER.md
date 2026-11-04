@@ -38,7 +38,6 @@ All adapter routes require a verified Keycloak token.
 | `GET/POST /api/pea/tenants/{tenant_id}/projects/{project_id}/documents` | List / create project documents |
 | `GET/POST .../documents/{document_id}/versions` | List / upload immutable versions |
 | `GET/POST .../versions/{version_id}/processing-runs` | Processing status / enqueue ingestion |
-| `GET /api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}` | Project document detail |
 | `GET /api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions` | Immutable document versions |
 | `GET .../versions/{version_id}/source-fragments` | Source fragments and locators |
 | `GET .../versions/{version_id}/artifacts` | Registered rendered-page artifacts |
