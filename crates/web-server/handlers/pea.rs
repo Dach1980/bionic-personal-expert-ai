@@ -122,7 +122,12 @@ async fn proxy_post(
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(180))
         .build()
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+        .map_err(|_| {
+            (
+                StatusCode::BAD_GATEWAY,
+                "PEA API client could not be initialized",
+            )
+        })?;
     let upstream = client
         .post(format!("{}{}", base_url.trim_end_matches('/'), path))
         .bearer_auth(user.access_token)
@@ -130,20 +135,34 @@ async fn proxy_post(
         .send()
         .await
         .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
-    let status = StatusCode::from_u16(upstream.status().as_u16())
-        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
     let cache_control = upstream.headers().get(header::CACHE_CONTROL).cloned();
-    let body = upstream.bytes().await
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API response could not be read"))?;
+    let body = upstream.bytes().await.map_err(|_| {
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA API response could not be read",
+        )
+    })?;
     if body.len() > 32 * 1024 * 1024 {
-        return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "PEA response exceeds adapter limit",
+        ));
     }
     let mut response = Response::builder().status(status);
-    if let Some(value) = content_type { response = response.header(header::CONTENT_TYPE, value); }
-    if let Some(value) = cache_control { response = response.header(header::CACHE_CONTROL, value); }
+    if let Some(value) = content_type {
+        response = response.header(header::CONTENT_TYPE, value);
+    }
+    if let Some(value) = cache_control {
+        response = response.header(header::CACHE_CONTROL, value);
+    }
     response.body(Body::from(body)).map_err(|_| {
-        (StatusCode::BAD_GATEWAY, "PEA response could not be forwarded")
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA response could not be forwarded",
+        )
     })
 }
 
@@ -157,7 +176,12 @@ async fn proxy_post_stream(
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(180))
         .build()
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+        .map_err(|_| {
+            (
+                StatusCode::BAD_GATEWAY,
+                "PEA API client could not be initialized",
+            )
+        })?;
     let upstream = client
         .post(format!("{}{}", base_url.trim_end_matches('/'), path))
         .bearer_auth(user.access_token)
@@ -165,14 +189,18 @@ async fn proxy_post_stream(
         .send()
         .await
         .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
-    let status = StatusCode::from_u16(upstream.status().as_u16())
-        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
     let cache_control = upstream.headers().get(header::CACHE_CONTROL).cloned();
     let stream = upstream.bytes_stream();
     let mut response = Response::builder().status(status);
-    if let Some(value) = content_type { response = response.header(header::CONTENT_TYPE, value); }
-    if let Some(value) = cache_control { response = response.header(header::CACHE_CONTROL, value); }
+    if let Some(value) = content_type {
+        response = response.header(header::CONTENT_TYPE, value);
+    }
+    if let Some(value) = cache_control {
+        response = response.header(header::CACHE_CONTROL, value);
+    }
     response
         .header("X-Accel-Buffering", "no")
         .body(Body::from_stream(stream))
@@ -191,9 +219,11 @@ async fn list_conversations(
     Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
-    proxy_get(format!(
-        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations"
-    ), user).await
+    proxy_get(
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations"),
+        user,
+    )
+    .await
 }
 
 async fn create_conversation(
@@ -201,18 +231,25 @@ async fn create_conversation(
     user: Jwt,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
-    proxy_post(format!(
-        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations"
-    ), user, payload).await
+    proxy_post(
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations"),
+        user,
+        payload,
+    )
+    .await
 }
 
 async fn list_conversation_messages(
     Path((tenant_id, project_id, conversation_id)): Path<(Uuid, Uuid, Uuid)>,
     user: Jwt,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
-    proxy_get(format!(
-        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages"
-    ), user).await
+    proxy_get(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages"
+        ),
+        user,
+    )
+    .await
 }
 
 async fn send_conversation_message(
@@ -220,9 +257,14 @@ async fn send_conversation_message(
     user: Jwt,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Response<Body>, (StatusCode, &'static str)> {
-    proxy_post_stream(format!(
-        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages"
-    ), user, payload).await
+    proxy_post_stream(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages"
+        ),
+        user,
+        payload,
+    )
+    .await
 }
 
 async fn list_projects(
