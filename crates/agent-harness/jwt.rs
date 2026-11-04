@@ -1,6 +1,6 @@
 use axum::{
     extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
+    http::{header, request::Parts, HeaderMap, StatusCode},
 };
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
@@ -228,6 +228,21 @@ fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -
     Ok(())
 }
 
+fn access_token_from_headers(headers: &HeaderMap) -> Result<&str, (StatusCode, &'static str)> {
+    if let Some(token) = headers
+        .get(X_FORWARDED_ACCESS_TOKEN)
+        .and_then(|value| value.to_str().ok())
+    {
+        return Ok(token);
+    }
+    headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .filter(|value| !value.is_empty())
+        .ok_or((StatusCode::UNAUTHORIZED, "Missing Keycloak access token"))
+}
+
 impl<S> FromRequestParts<S> for Jwt
 where
     S: Send + Sync,
@@ -235,11 +250,7 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let token = parts
-            .headers
-            .get(X_FORWARDED_ACCESS_TOKEN)
-            .and_then(|header| header.to_str().ok())
-            .ok_or((StatusCode::UNAUTHORIZED, "Missing Keycloak access token"))?;
+        let token = access_token_from_headers(&parts.headers)?;
 
         verify_keycloak_access_token(token)
             .await
@@ -278,6 +289,29 @@ mod tests {
             aud: Audience::Multiple(vec!["account".to_string(), "pea-api".to_string()]),
             nbf: None,
         }
+    }
+
+    #[test]
+    fn access_token_extractor_accepts_a_bearer_token_for_public_pkce_clients() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::AUTHORIZATION, "Bearer signed.jwt.token".parse().unwrap());
+        assert_eq!(access_token_from_headers(&headers).unwrap(), "signed.jwt.token");
+    }
+
+    #[test]
+    fn trusted_forwarded_token_takes_precedence_over_authorization() {
+        let mut headers = HeaderMap::new();
+        headers.insert(X_FORWARDED_ACCESS_TOKEN, "gateway.jwt.token".parse().unwrap());
+        headers.insert(header::AUTHORIZATION, "Bearer browser.jwt.token".parse().unwrap());
+        assert_eq!(access_token_from_headers(&headers).unwrap(), "gateway.jwt.token");
+    }
+
+    #[test]
+    fn access_token_extractor_rejects_missing_or_malformed_bearer_headers() {
+        let mut headers = HeaderMap::new();
+        assert!(access_token_from_headers(&headers).is_err());
+        headers.insert(header::AUTHORIZATION, "Basic abc".parse().unwrap());
+        assert!(access_token_from_headers(&headers).is_err());
     }
 
     #[test]
