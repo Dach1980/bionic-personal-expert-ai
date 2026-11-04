@@ -54,6 +54,10 @@ The server-side adapter must remain behind this trust boundary. Never enable the
 The authenticated workspace page `/o/{team_id}/pea` loads projects, documents, immutable versions, source fragments, rendered page images, reviews, findings, evidence and project knowledge through these same-origin adapter routes. Fragment selection scrolls to the corresponding rendered page when a page locator is available.
 
 
+## Automated Keycloak setup
+
+Use the shared Stack-managed realm; do not create a second Keycloak server. The PEA repository now includes an idempotent bootstrap command that creates the `pea-api` audience client, the `pea-api-context` scope and attaches the scope to Bionic's OIDC client. Follow [`Personal Expert AI Keycloak setup`](https://github.com/Dach1980/Personal_Expert_AI/blob/main/infra/keycloak/README.md) and run `python scripts/configure_keycloak_realm.py` from the PEA repository with the Stack administrator credentials supplied only through environment variables. The script prints the exact issuer and JWKS discovery values. It does not create PEA users or memberships; those remain explicit provisioning steps.
+
 ## Keycloak realm configuration
 
 The Stack manifest uses the Stack-managed Keycloak realm `bionic-gpt`; do not provision a second identity server. Stack's OIDC component places oauth2-proxy in front of Bionic and creates the realm for the StackApp. The server validates the forwarded access token independently.
