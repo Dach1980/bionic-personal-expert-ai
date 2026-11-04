@@ -305,10 +305,7 @@ async fn upload_document_version(
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid multipart upload"))?
     {
         if field.name() == Some("file") {
-            let filename = field
-                .file_name()
-                .unwrap_or("document")
-                .to_string();
+            let filename = field.file_name().unwrap_or("document").to_string();
             let media_type = field
                 .content_type()
                 .unwrap_or("application/octet-stream")
@@ -318,24 +315,39 @@ async fn upload_document_version(
                 .await
                 .map_err(|_| (StatusCode::BAD_REQUEST, "Uploaded file could not be read"))?;
             if bytes.is_empty() || bytes.len() > 100 * 1024 * 1024 {
-                return Err((StatusCode::PAYLOAD_TOO_LARGE, "File is empty or exceeds 100 MiB"));
+                return Err((
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "File is empty or exceeds 100 MiB",
+                ));
             }
             upload = Some((filename, media_type, bytes.to_vec()));
         }
     }
-    let (filename, media_type, bytes) =
-        upload.ok_or((StatusCode::BAD_REQUEST, "Multipart field 'file' is required"))?;
+    let (filename, media_type, bytes) = upload.ok_or((
+        StatusCode::BAD_REQUEST,
+        "Multipart field 'file' is required",
+    ))?;
     let part = reqwest::multipart::Part::bytes(bytes)
         .file_name(filename)
         .mime_str(&media_type)
-        .map_err(|_| (StatusCode::UNSUPPORTED_MEDIA_TYPE, "Invalid file media type"))?;
+        .map_err(|_| {
+            (
+                StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                "Invalid file media type",
+            )
+        })?;
     let form = reqwest::multipart::Form::new().part("file", part);
     let base_url = std::env::var("PEA_API_BASE_URL")
         .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "PEA API is not configured"))?;
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(180))
         .build()
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+        .map_err(|_| {
+            (
+                StatusCode::BAD_GATEWAY,
+                "PEA API client could not be initialized",
+            )
+        })?;
     let upstream = client
         .post(format!(
             "{}/api/v1/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions",
@@ -351,17 +363,26 @@ async fn upload_document_version(
         StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
     let body = upstream.bytes().await.map_err(|_| {
-        (StatusCode::BAD_GATEWAY, "PEA API upload response could not be read")
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA API upload response could not be read",
+        )
     })?;
     if body.len() > 32 * 1024 * 1024 {
-        return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "PEA response exceeds adapter limit",
+        ));
     }
     let mut response = Response::builder().status(status);
     if let Some(value) = content_type {
         response = response.header(header::CONTENT_TYPE, value);
     }
     response.body(Body::from(body)).map_err(|_| {
-        (StatusCode::BAD_GATEWAY, "PEA upload response could not be forwarded")
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA upload response could not be forwarded",
+        )
     })
 }
 
@@ -397,14 +418,20 @@ async fn enqueue_processing(
         StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
     let body = upstream.bytes().await.map_err(|_| {
-        (StatusCode::BAD_GATEWAY, "PEA API response could not be read")
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA API response could not be read",
+        )
     })?;
     let mut response = Response::builder().status(status);
     if let Some(value) = content_type {
         response = response.header(header::CONTENT_TYPE, value);
     }
     response.body(Body::from(body)).map_err(|_| {
-        (StatusCode::BAD_GATEWAY, "PEA response could not be forwarded")
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA response could not be forwarded",
+        )
     })
 }
 
