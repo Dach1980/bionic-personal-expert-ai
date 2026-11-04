@@ -171,3 +171,17 @@ Bionic is licensed under the Apache License 2.0.
 A static design preview of the adapted workspace is available in [`demo/index.html`](demo/index.html). It illustrates the Personal Expert AI navigation, project/document overview, chat start screen, evidence cards and sample source viewer interactions.
 
 The preview is synthetic and does not connect to the FastAPI backend, authentication, PostgreSQL or Agent Runtime. To publish it, enable GitHub Pages with **Settings → Pages → Build and deployment → Source → GitHub Actions**. The deployment workflow is [`pages-demo.yml`](.github/workflows/pages-demo.yml); after a successful run the expected URL is https://dach1980.github.io/bionic-personal-expert-ai/.
+
+## Personal Expert AI Adapter
+
+This fork exposes a server-side PEA adapter under `/api/pea`. The Pages SPA authenticates with the shared Keycloak realm using the public `pea-web` client (Authorization Code + PKCE S256), sends a short-lived Bearer access token, and does not store tokens in localStorage/sessionStorage. The Bionic JWT extractor verifies the token before any adapter handler runs; PEA independently validates it again and authorizes tenant/project membership.
+
+Required server environment:
+
+- `PEA_API_BASE_URL`: private HTTPS origin of the PEA FastAPI service; never expose this internal address in the browser bundle.
+- `PEA_WEB_ORIGIN`: exact browser origin, e.g. `https://dach1980.github.io`. If unset, cross-origin CORS remains disabled. Wildcard origins and credentialed cookies are not enabled.
+
+Adapter routes cover session, projects, conversations/messages (including SSE), document creation/version upload, processing run status/enqueue, source fragments, artifacts, reviews, findings and evidence. Uploads are capped at 100 MiB at the adapter boundary and forwarded with the caller's verified Bearer token and idempotency key.
+
+The browser token is a user access token, not a service credential. Never trust tenant/user headers from the browser; identity and tenant context are derived from the verified JWT and checked again by PEA.
+
