@@ -402,7 +402,12 @@ async fn enqueue_processing(
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(45))
         .build()
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+        .map_err(|_| {
+            (
+                StatusCode::BAD_GATEWAY,
+                "PEA API client could not be initialized",
+            )
+        })?;
     let upstream = client
         .post(format!(
             "{}/api/v1/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/processing-runs",
