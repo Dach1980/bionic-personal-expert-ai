@@ -251,12 +251,8 @@ where
 mod tests {
     use super::*;
     use base64::engine::general_purpose::STANDARD;
-    use ring::{
-        rand::SystemRandom,
-        signature::{RsaKeyPair, RSA_PKCS1_SHA256},
-    };
+    use base64::engine::general_purpose::STANDARD;
 
-    const TEST_PRIVATE_KEY: &str = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDAoQBkNQI7L+Vj5lwxXrHzlFsiDLsj0AaysiTWnh5qwTZOiaKIxCBwNbWwZwHGXTOJIhABZo668gRlFkM6VgPquxmUEMOHeklQfUmU6E1+FXdcPDILDRcSNtVVJpanxCR+PrmfrHrHmG965XJ7UvNianINAk7t9NHiowZk3MTfENNUbGo0DmGQ4LsDUp65vQF5BvnZjwDQ7ZiEzDkixP+Ab03g3vC2lpeqt+QZBCvinhfz9MO6l1vacjTDNHY4o5EcwNdDY+JTH+vu/7bCX0OCVth14PUWXX0aftRnebm8COjS68kBaOnPwLlqqLkxKX779fvrhd3cTmtwq3N04OoxAgMBAAECggEADvUxk5ZuKuxoMp6zr/27cb+mZ/l3GqvPqVad97BlikKgle6oGVipcC0rg5wsDhw0oURs2777/FZIsxTMeZ4uRa7rqIy4si9zu/VOnmp/gffmwdnGxQbqMLbjT+5kKnjXoJn8TgLVseQLXA6vGhZx4cWEP7BbMq0dEy03lONzwiJoxC684K9AMrYcGlxTJ0GBCBMgVfJVG7MpT8h4445EBVzqVsRX89v/dW0bJAh+zFnUnQhPXGPPs5h1GtwsPw3vzONnAqCYwBcMrrKt+r9ln8DKKUSqhXvhxUsXk+6wwuKnILaOVd9jlgDlMz2S+eKWkT5vJpleNYtocLjYvKUb5QKBgQDuJQ+ZmZD3Yg/zReajrvrN8zLKhuUJmkRuSbTJfosJIa6oE6tZATDvEBTl/CjtyNjKkwdoXipzXUjydGZ2teUr2KwaiD7YD40fIY2Q2iHXMWeSCJQ9lzG3PRUul9m/eKiWd0S/2y3fshdxCoum0lAU3Fkhfk8T3rbs1jUIdDFCDwKBgQDPEk+7jg7mygo8xmeg6tUZ8F2yabhZm47nyAFrUFxkWsgblJ/2eOIYnGtTxkAPukLQYO5X2tUItrOclq0LEcAc/LBIuiiK27RdVxx+397U8S8qjihBrQdKDndwCMHl9iNNNWL4oLxzO5F6eNMQFW0vx1P+CmPFXfG94UboSWJPvwKBgCsv42VamRST3wqiGZKDkA47VXGvBug35sMNcNC9tx8f0Zm/f2pzsdkY1IFkulNtAguyoDxIH3CucSUvAMn0cKwD7iodnS/3mgMURaUIOezZk8vC7IdC3Qw68pVxilaT3hbzaC9W4znXBTNF00+cglNWJn/RdSvITuoiapmu4KP3AoGAfIU0cULB70L72QQuePP+ZfTHQ2yTsT78NqFtSQ0wIiD9SKidcOfMfqRBXkVPbKXDW++OJEKx7OWBKN7q/EcWUdgaYgGgM7Bey+qAdkNFiqPmix6lUqksQvpkFHkPsKvNGrbJ510xNdJSb2WM9pUL7bld5tx0ltEhd9+qdjD6750CgYBLCpVhy8E2PKtOW8aQ1uQ+oMS5PWuFPk97tqz7Bq8ESzWU7273s1CC7EB/0o7JYFTUFAU6uKb7RL+stm/x+r3l3qQFwWhbg65cWSYUXR04kXOpgghXApIWBgPdRJOXSsAoQ9CIoyjsAbPhw4fV0JsTNPuG5TSO/x951Q5NkW2UFA==";
     const TEST_MODULUS: &str = "wKEAZDUCOy_lY-ZcMV6x85RbIgy7I9AGsrIk1p4easE2TomiiMQgcDW1sGcBxl0ziSIQAWaOuvIEZRZDOlYD6rsZlBDDh3pJUH1JlOhNfhV3XDwyCw0XEjbVVSaWp8Qkfj65n6x6x5hveuVye1LzYmpyDQJO7fTR4qMGZNzE3xDTVGxqNA5hkOC7A1Keub0BeQb52Y8A0O2YhMw5IsT_gG9N4N7wtpaXqrfkGQQr4p4X8_TDupdb2nI0wzR2OKORHMDXQ2PiUx_r7v-2wl9DglbYdeD1Fl19Gn7UZ3m5vAjo0uvJAWjpz8C5aqi5MSl--_X764Xd3E5rcKtzdODqMQ";
 
     fn test_jwk() -> Jwk {
@@ -287,18 +283,9 @@ mod tests {
 
     #[test]
     fn rs256_signature_accepts_the_matching_jwk_and_rejects_tampering() {
-        let key_bytes = STANDARD.decode(TEST_PRIVATE_KEY).unwrap();
-        let key_pair = RsaKeyPair::from_pkcs8(&key_bytes).unwrap();
+        const TEST_SIGNATURE: &str = "UXwAXEufhWY8fP4LP+2sdZyA8K6Lo9HD6Q5Vc0anic2kiP8a3SNLtgnpKMaRXWcS8Rkb9BOVYuXByGKxk9lxK6a61Nsd0DizYVi6L5pXH01SKLM9n4u+2wR0jMLJ3q+oRWNJHyBinMOG97+01XQU0HiWpZnqXPXmT5Yl56+BBLkwsIx31Ncb+q4wQDs9HAvff9BJQ+iPTYDKc6zI7VaGVU8UWUvuo6eProTeZgNxYaou9gP02HT60MgyNVj6RK4DT2+ukAcixUCVw8F9OvXGGYN8B4Y2t1OLal3ysWDF1gasgAU5yXsgNWgrvPmHg9rOk9cESPsX/EjW3/Bn3o3+Ig==";
         let signing_input = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2lkIn0.eyJzdWIiOiJ0ZXN0In0";
-        let mut signature = vec![0; key_pair.public_modulus_len()];
-        key_pair
-            .sign(
-                &RSA_PKCS1_SHA256,
-                &SystemRandom::new(),
-                signing_input.as_bytes(),
-                &mut signature,
-            )
-            .unwrap();
+        let mut signature = STANDARD.decode(TEST_SIGNATURE).unwrap();
 
         let jwk = test_jwk();
         assert!(verify_rs256_signature(signing_input, &signature, &jwk).is_ok());
