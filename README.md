@@ -172,6 +172,11 @@ A static design preview of the adapted workspace is available in [`demo/index.ht
 
 The preview is synthetic and does not connect to the FastAPI backend, authentication, PostgreSQL or Agent Runtime. To publish it, enable GitHub Pages with **Settings → Pages → Build and deployment → Source → GitHub Actions**. The deployment workflow is [`pages-demo.yml`](.github/workflows/pages-demo.yml); after a successful run the expected URL is https://dach1980.github.io/bionic-personal-expert-ai/.
 
+## Personal Expert AI delivery plan
+
+- [Cross-repository implementation roadmap](https://github.com/Dach1980/Personal_Expert_AI/blob/main/docs/development/IMPLEMENTATION_ROADMAP_2026-11-04.md)
+- [Fork-specific image delivery strategy](docs/development/IMAGE_DELIVERY_STRATEGY_2026-11-04.md)
+
 ## Personal Expert AI Adapter
 
 This fork exposes a server-side PEA adapter under `/api/pea`. The Pages SPA authenticates with the shared Keycloak realm using the public `pea-web` client (Authorization Code + PKCE S256), sends a short-lived Bearer access token, and does not store tokens in localStorage/sessionStorage. The Bionic JWT extractor verifies the token before any adapter handler runs; PEA independently validates it again and authorizes tenant/project membership.
