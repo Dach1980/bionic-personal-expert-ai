@@ -12,6 +12,8 @@ pub use errors::CustomError;
 pub use jwt::Jwt;
 
 use axum::{middleware, Extension, Router};
+use http::{header, HeaderValue, Method};
+use tower_http::cors::CorsLayer;
 use std::net::SocketAddr;
 
 #[tokio::main]
@@ -87,6 +89,20 @@ async fn main() {
     db::i18n::set_global(i18n.clone());
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 
+    // Allow the public Pages SPA only when an exact deployment origin is configured.
+    // Bearer-token authentication is used; cookies are not shared cross-origin.
+    let cors = std::env::var("PEA_WEB_ORIGIN")
+        .map(|origin| {
+            let origin = origin.parse::<HeaderValue>()
+                .expect("PEA_WEB_ORIGIN must be a valid single origin");
+            CorsLayer::new()
+                .allow_origin(origin)
+                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
+                .max_age(std::time::Duration::from_secs(600))
+        })
+        .unwrap_or_else(|_| CorsLayer::new());
+
     // build our application with a route
     let app = Router::new()
         .typed_get(handlers::static_files::static_path)
@@ -122,6 +138,7 @@ async fn main() {
         .merge(handlers::web_search::routes())
         .merge(handlers::teams::routes())
         .layer(middleware::from_fn(telemetry::annotate_render_time))
+        .layer(cors)
         .layer(Extension(config.clone()))
         .layer(Extension(pool.clone()))
         .layer(Extension(storage_config.clone()));
