@@ -298,6 +298,19 @@ async fn list_versions(
     .await
 }
 
+async fn list_processing_runs(
+    Path((tenant_id, project_id, document_id, version_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(
+        format!(
+            "/api/v1/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/processing-runs"
+        ),
+        user,
+    )
+    .await
+}
+
 async fn list_source_fragments(
     Path((tenant_id, project_id, document_id, version_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
     user: Jwt,
@@ -463,6 +476,10 @@ pub fn routes() -> Router {
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/source-fragments",
             get(list_source_fragments),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/processing-runs",
+            get(list_processing_runs),
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/artifacts",
