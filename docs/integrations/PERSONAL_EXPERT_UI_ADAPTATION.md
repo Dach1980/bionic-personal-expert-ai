@@ -159,11 +159,11 @@ Implemented in the Personal Expert AI repository:
 
 Storage keys and absolute filesystem paths are removed recursively from browser-facing locators. Rendered-page bytes are exposed only by opaque artifact ID after checking tenant, project, document, immutable version and project membership.
 
-Not yet implemented in the backend: Review, Finding and explicit Evidence domain resources. The current database schema does not contain Review/Finding tables. Do not connect the Reviews navigation to a placeholder or unrelated Bionic audit trail.
+Review, Finding and Evidence are now implemented as PEA domain entities with Alembic migration `0009_reviews_findings_evidence`, create/read/status APIs, project-role authorization and audit events. Migration `0010_review_domain_rls` adds PostgreSQL tenant RLS for these tables. Bionic currently exposes their read endpoints through the server adapter; write APIs remain available directly in PEA and can be added to the adapter after the UI mutation/CSRF contract is designed.
 
 ### Identity boundary
 
-The current Personal Expert AI API trusts HS256 JWTs from a configured issuer/audience and resolves `sub` to a Personal Expert AI User UUID. Bionic has its own existing user/session model. No verified mapping between those identities has been implemented. A Bionic server-side adapter must not fabricate JWTs, accept tenant IDs as proof of access, or expose a service credential to the browser. The next integration task is a documented trusted identity bridge (or an explicitly provisioned identity mapping) with negative tests for cross-tenant and cross-project access.
+PEA and Bionic now validate Keycloak RS256/JWKS access tokens against configured issuer and audience. PEA maps the verified `(issuer, subject)` pair through `external_identities`, then checks active PEA user, tenant membership and project membership. Identity provisioning is explicit; it does not create tenants or grants. Bionic's fixed server-side adapter forwards the original verified access token to PEA; the browser never receives PEA database credentials or service secrets. The remaining security gate is runtime verification that the Stack OIDC gateway strips client-supplied `X-Forwarded-Access-Token` and injects the actual token.
 
 ### GitHub Pages visual preview
 
@@ -182,4 +182,4 @@ The Personal Expert AI PostgreSQL 16 workflow completed successfully for the sou
 - PostgreSQL integration and full pytest suite: 86 passed
 - Ruff lint: passed
 
-This validates the backend API/schema and current test suite. It does not yet validate a running Bionic-to-Personal-Expert-AI authenticated session, because the trusted identity bridge is still pending.
+This validates the PEA backend and Rust/UI build independently. It does not yet validate a running Bionic-to-PEA session through a live Keycloak realm, nor the complete browser login → dialogue → Agent Runtime → source evidence journey. Those runtime tests require the local Stack OIDC gateway, Keycloak realm configuration, PEA API and Bionic to be running together.
