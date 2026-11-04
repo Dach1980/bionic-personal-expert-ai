@@ -68,6 +68,7 @@ dependencies = [
  "reqwest 0.13.1",
  "rig-core",
  "rig-reqwest",
+ "ring 0.17.8",
  "serde",
  "serde_json",
  "tiktoken-rs",
@@ -76,6 +77,7 @@ dependencies = [
  "tool-runtime",
  "tower-http 0.6.8",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -7986,7 +7988,6 @@ dependencies = [
  "validator",
  "web-pages",
  "zip",
- "ring 0.17.8",
 ]
 
 [[package]]
