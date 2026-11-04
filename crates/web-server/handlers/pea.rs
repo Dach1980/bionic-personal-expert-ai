@@ -1,10 +1,10 @@
 use crate::{locale::Locale, CustomError, Jwt};
 use axum::{
     body::Body,
-    extract::{Extension, Path, Query},
+    extract::{Extension, Json, Path, Query},
     http::{header, HeaderName, HeaderValue, Response, StatusCode},
     response::Html,
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use axum_extra::routing::RouterExt;
@@ -110,6 +110,119 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
             "PEA response could not be forwarded",
         )
     })
+}
+
+async fn proxy_post(
+    path: String,
+    user: Jwt,
+    payload: serde_json::Value,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    let base_url = std::env::var("PEA_API_BASE_URL")
+        .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "PEA API is not configured"))?;
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(180))
+        .build()
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+    let upstream = client
+        .post(format!("{}{}", base_url.trim_end_matches('/'), path))
+        .bearer_auth(user.access_token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
+    let status = StatusCode::from_u16(upstream.status().as_u16())
+        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
+    let cache_control = upstream.headers().get(header::CACHE_CONTROL).cloned();
+    let body = upstream.bytes().await
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API response could not be read"))?;
+    if body.len() > 32 * 1024 * 1024 {
+        return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+    }
+    let mut response = Response::builder().status(status);
+    if let Some(value) = content_type { response = response.header(header::CONTENT_TYPE, value); }
+    if let Some(value) = cache_control { response = response.header(header::CACHE_CONTROL, value); }
+    response.body(Body::from(body)).map_err(|_| {
+        (StatusCode::BAD_GATEWAY, "PEA response could not be forwarded")
+    })
+}
+
+async fn proxy_post_stream(
+    path: String,
+    user: Jwt,
+    payload: serde_json::Value,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    let base_url = std::env::var("PEA_API_BASE_URL")
+        .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "PEA API is not configured"))?;
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(180))
+        .build()
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+    let upstream = client
+        .post(format!("{}{}", base_url.trim_end_matches('/'), path))
+        .bearer_auth(user.access_token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
+    let status = StatusCode::from_u16(upstream.status().as_u16())
+        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
+    let cache_control = upstream.headers().get(header::CACHE_CONTROL).cloned();
+    let stream = upstream.bytes_stream();
+    let mut response = Response::builder().status(status);
+    if let Some(value) = content_type { response = response.header(header::CONTENT_TYPE, value); }
+    if let Some(value) = cache_control { response = response.header(header::CACHE_CONTROL, value); }
+    response
+        .header("X-Accel-Buffering", "no")
+        .body(Body::from_stream(stream))
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA stream could not be forwarded"))
+}
+
+async fn get_session(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get("/api/v1/session".to_string(), user).await
+}
+
+async fn get_current_projects(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get("/api/v1/projects".to_string(), user).await
+}
+
+async fn list_conversations(
+    Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(format!(
+        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations"
+    ), user).await
+}
+
+async fn create_conversation(
+    Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
+    user: Jwt,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_post(format!(
+        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations"
+    ), user, payload).await
+}
+
+async fn list_conversation_messages(
+    Path((tenant_id, project_id, conversation_id)): Path<(Uuid, Uuid, Uuid)>,
+    user: Jwt,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get(format!(
+        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages"
+    ), user).await
+}
+
+async fn send_conversation_message(
+    Path((tenant_id, project_id, conversation_id)): Path<(Uuid, Uuid, Uuid)>,
+    user: Jwt,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_post_stream(format!(
+        "/api/v1/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages"
+    ), user, payload).await
 }
 
 async fn list_projects(
@@ -286,6 +399,16 @@ async fn list_evidence(
 pub fn routes() -> Router {
     Router::new()
         .typed_get(index)
+        .route("/api/pea/session", get(get_session))
+        .route("/api/pea/projects", get(get_current_projects))
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/conversations",
+            get(list_conversations).post(create_conversation),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages",
+            get(list_conversation_messages).post(send_conversation_message),
+        )
         .route("/api/pea/tenants/{tenant_id}/projects", get(list_projects))
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents",
