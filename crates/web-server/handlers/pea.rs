@@ -605,23 +605,15 @@ pub fn routes() -> Router {
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions",
-            post(upload_document_version),
+            get(list_versions).post(upload_document_version),
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/processing-runs",
             get(list_processing_runs).post(enqueue_processing),
         )
         .route(
-            "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions",
-            get(list_versions),
-        )
-        .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/source-fragments",
             get(list_source_fragments),
-        )
-        .route(
-            "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/processing-runs",
-            get(list_processing_runs),
         )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents/{document_id}/versions/{version_id}/artifacts",
