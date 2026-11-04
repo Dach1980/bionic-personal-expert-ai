@@ -93,6 +93,7 @@ services:
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:?Set OIDC_AUDIENCE in the local .env file}
       OIDC_JWKS_URL: ${OIDC_JWKS_URL:?Set OIDC_JWKS_URL in the local .env file}
       PEA_API_BASE_URL: ${PEA_API_BASE_URL:?Set PEA_API_BASE_URL in the local .env file}
+      PEA_WEB_ORIGIN: ${PEA_WEB_ORIGIN:-}
       APP_DATABASE_URL: postgresql://application_user:testpassword@postgres:5432/bionic-gpt?sslmode=disable
     depends_on:
       postgres:
