@@ -370,4 +370,19 @@ mod tests {
         )
         .is_err());
     }
+
+    #[tokio::test]
+    async fn rejects_untrusted_forwarded_identity_headers_without_access_token() {
+        use axum::{body::Body, http::Request};
+
+        let request = Request::builder()
+            .header("X-Forwarded-User", "forged-subject")
+            .header("X-Forwarded-Email", "forged@example.test")
+            .body(Body::empty())
+            .unwrap();
+        let (mut parts, _) = request.into_parts();
+
+        let result = Jwt::from_request_parts(&mut parts, &()).await;
+        assert!(matches!(result, Err((StatusCode::UNAUTHORIZED, _))));
+    }
 }
