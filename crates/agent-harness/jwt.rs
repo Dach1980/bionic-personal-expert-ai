@@ -294,16 +294,31 @@ mod tests {
     #[test]
     fn access_token_extractor_accepts_a_bearer_token_for_public_pkce_clients() {
         let mut headers = HeaderMap::new();
-        headers.insert(header::AUTHORIZATION, "Bearer signed.jwt.token".parse().unwrap());
-        assert_eq!(access_token_from_headers(&headers).unwrap(), "signed.jwt.token");
+        headers.insert(
+            header::AUTHORIZATION,
+            "Bearer signed.jwt.token".parse().unwrap(),
+        );
+        assert_eq!(
+            access_token_from_headers(&headers).unwrap(),
+            "signed.jwt.token"
+        );
     }
 
     #[test]
     fn trusted_forwarded_token_takes_precedence_over_authorization() {
         let mut headers = HeaderMap::new();
-        headers.insert(X_FORWARDED_ACCESS_TOKEN, "gateway.jwt.token".parse().unwrap());
-        headers.insert(header::AUTHORIZATION, "Bearer browser.jwt.token".parse().unwrap());
-        assert_eq!(access_token_from_headers(&headers).unwrap(), "gateway.jwt.token");
+        headers.insert(
+            X_FORWARDED_ACCESS_TOKEN,
+            "gateway.jwt.token".parse().unwrap(),
+        );
+        headers.insert(
+            header::AUTHORIZATION,
+            "Bearer browser.jwt.token".parse().unwrap(),
+        );
+        assert_eq!(
+            access_token_from_headers(&headers).unwrap(),
+            "gateway.jwt.token"
+        );
     }
 
     #[test]
