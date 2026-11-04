@@ -13,8 +13,8 @@ pub use jwt::Jwt;
 
 use axum::{middleware, Extension, Router};
 use http::{header, HeaderValue, Method};
-use tower_http::cors::CorsLayer;
 use std::net::SocketAddr;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
@@ -93,7 +93,8 @@ async fn main() {
     // Bearer-token authentication is used; cookies are not shared cross-origin.
     let cors = std::env::var("PEA_WEB_ORIGIN")
         .map(|origin| {
-            let origin = origin.parse::<HeaderValue>()
+            let origin = origin
+                .parse::<HeaderValue>()
                 .expect("PEA_WEB_ORIGIN must be a valid single origin");
             CorsLayer::new()
                 .allow_origin(origin)
