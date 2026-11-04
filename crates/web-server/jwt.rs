@@ -190,7 +190,6 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
     })
 }
 
-
 fn verify_rs256_signature(signing_input: &str, signature: &[u8], jwk: &Jwk) -> Result<(), ()> {
     let modulus = URL_SAFE_NO_PAD
         .decode(jwk.n.as_deref().ok_or(())?)
@@ -210,12 +209,7 @@ fn verify_rs256_signature(signing_input: &str, signature: &[u8], jwk: &Jwk) -> R
     .map_err(|_| ())
 }
 
-fn validate_claims(
-    claims: &JwtClaims,
-    issuer: &str,
-    audience: &str,
-    now: u64,
-) -> Result<(), ()> {
+fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -> Result<(), ()> {
     let leeway = 30_u64;
     if claims.iss != issuer
         || !claims.aud.contains(audience)
@@ -252,7 +246,6 @@ where
             .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid Keycloak access token"))
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -299,7 +292,12 @@ mod tests {
         let signing_input = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2lkIn0.eyJzdWIiOiJ0ZXN0In0";
         let mut signature = vec![0; key_pair.public_modulus_len()];
         key_pair
-            .sign(&RSA_PKCS1_SHA256, &SystemRandom::new(), signing_input.as_bytes(), &mut signature)
+            .sign(
+                &RSA_PKCS1_SHA256,
+                &SystemRandom::new(),
+                signing_input.as_bytes(),
+                &mut signature,
+            )
             .unwrap();
 
         let jwk = test_jwk();
@@ -313,23 +311,63 @@ mod tests {
     fn claims_require_the_configured_issuer_audience_and_valid_time_window() {
         let now = 1_800_000_000;
         let claims = test_claims(now);
-        assert!(validate_claims(&claims, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_ok());
+        assert!(
+            validate_claims(
+                &claims,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_ok()
+        );
 
         let mut wrong_issuer = test_claims(now);
         wrong_issuer.iss = "https://attacker.example/realm".to_string();
-        assert!(validate_claims(&wrong_issuer, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_err());
+        assert!(
+            validate_claims(
+                &wrong_issuer,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_err()
+        );
 
         let mut wrong_audience = test_claims(now);
         wrong_audience.aud = Audience::Single("another-api".to_string());
-        assert!(validate_claims(&wrong_audience, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_err());
+        assert!(
+            validate_claims(
+                &wrong_audience,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_err()
+        );
 
         let mut expired = test_claims(now);
         expired.exp = now - 60;
-        assert!(validate_claims(&expired, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_err());
+        assert!(
+            validate_claims(
+                &expired,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_err()
+        );
 
         let mut malformed_tenant = test_claims(now);
         malformed_tenant.tenant_id = "not-a-uuid".to_string();
-        assert!(validate_claims(&malformed_tenant, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_err());
+        assert!(
+            validate_claims(
+                &malformed_tenant,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -337,10 +375,26 @@ mod tests {
         let now = 1_800_000_000;
         let mut future_iat = test_claims(now);
         future_iat.iat = now + 60;
-        assert!(validate_claims(&future_iat, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_err());
+        assert!(
+            validate_claims(
+                &future_iat,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_err()
+        );
 
         let mut future_nbf = test_claims(now);
         future_nbf.nbf = Some(now + 60);
-        assert!(validate_claims(&future_nbf, "https://sso.example.test/realms/bionic-gpt", "pea-api", now).is_err());
+        assert!(
+            validate_claims(
+                &future_nbf,
+                "https://sso.example.test/realms/bionic-gpt",
+                "pea-api",
+                now
+            )
+            .is_err()
+        );
     }
 }
