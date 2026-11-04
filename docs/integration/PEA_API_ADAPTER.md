@@ -43,6 +43,10 @@ All adapter routes require a verified Keycloak token.
 
 The adapter forwards only the upstream status, body and a small allowlist of safe response headers. PEA remains responsible for authorization, storage-key redaction, content integrity and no-store behavior.
 
+## Agent Runtime integration status
+
+The workspace adapter currently serves PEA data to the Bionic UI. The existing Agent Runtime still uses its standard Bionic tool set; it does **not yet perform semantic/lexical search over PEA SourceFragments or KnowledgeItems**. The shared JWT extractor now validates Keycloak identity for Agent Runtime requests as well, but the access token is not yet propagated into a PEA search tool. Do not describe chat answers as PEA-document-grounded until a tenant/project-scoped PEA search API, a server-side Agent Runtime tool and document-grounded dialogue tests are implemented. Never solve this by giving the browser direct PEA access or by putting service credentials in a prompt.
+
 ## Important deployment note
 
 The example `infra-as-code/docker-compose.yml` is not itself an OIDC gateway. Do not expose the Bionic app port to an untrusted network or assume that setting OIDC environment variables creates a login flow. Use the Stack OIDC component or another trusted gateway that:
