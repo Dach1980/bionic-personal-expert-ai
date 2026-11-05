@@ -5,7 +5,8 @@ use reqwest::{redirect::Policy, Client, Url};
 use rig::wasm_compat::WasmBoxedFuture;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 const MAX_RESPONSE_BYTES: usize = 1024 * 1024;
@@ -26,6 +27,7 @@ pub struct PeaRetrievalContext {
     bionic_project_id: i32,
     bionic_task_id: i64,
     owner_subject: String,
+    allowed_citations: Arc<Mutex<HashSet<String>>>,
 }
 
 #[derive(Serialize)]
@@ -109,6 +111,7 @@ impl PeaRetrievalContext {
             bionic_project_id,
             bionic_task_id,
             owner_subject,
+            allowed_citations: Arc::new(Mutex::new(HashSet::new())),
         };
         let access_token = context.access_token().await?;
         let response = context
@@ -235,7 +238,56 @@ impl PeaRetrievalContext {
         }
         let payload: Value = serde_json::from_slice(&bytes)
             .map_err(|_| "PEA returned an invalid search response".to_string())?;
+        let results = payload
+            .get("results")
+            .and_then(Value::as_array)
+            .ok_or_else(|| "PEA search response has no results array".to_string())?;
+        let mut allowed = self
+            .allowed_citations
+            .lock()
+            .map_err(|_| "PEA citation registry is unavailable".to_string())?;
+        for result in results {
+            allowed.insert(required_string(result, "fragment_id")?.to_string());
+        }
+        drop(allowed);
         format_search_results(&payload, top_k as usize)
+    }
+
+    /// Remove citation markers that do not refer to a fragment returned in this
+    /// scheduled run. The model cannot expand this allowlist itself.
+    pub fn validate_citations(&self, snapshot: &str) -> (String, bool) {
+        let allowed = match self.allowed_citations.lock() {
+            Ok(value) => value,
+            Err(_) => return (snapshot.to_string(), true),
+        };
+        let mut output = String::with_capacity(snapshot.len());
+        let mut cursor = 0;
+        let mut invalid = false;
+        while let Some(relative_start) = snapshot[cursor..].find("[PEA:") {
+            let start = cursor + relative_start;
+            output.push_str(&snapshot[cursor..start]);
+            let id_start = start + 5;
+            let Some(relative_end) = snapshot[id_start..].find(']') else {
+                output.push_str(&snapshot[start..]);
+                cursor = snapshot.len();
+                invalid = true;
+                break;
+            };
+            let end = id_start + relative_end;
+            let citation_id = &snapshot[id_start..end];
+            if allowed.contains(citation_id) {
+                output.push_str(&snapshot[start..=end]);
+            } else {
+                output.push_str("[PEA citation unverified]");
+                invalid = true;
+            }
+            cursor = end + 1;
+        }
+        output.push_str(&snapshot[cursor..]);
+        if invalid {
+            output.push_str("\n\nNote: one or more unverified PEA citation markers were removed.");
+        }
+        (output, invalid)
     }
 }
 
@@ -308,7 +360,7 @@ fn format_search_results(payload: &Value, max_results: usize) -> Result<String, 
             .map(Value::to_string)
             .unwrap_or_else(|| "{}".to_string());
         output.push_str(&format!(
-            "\n{}. Source fragment: {}\nDocument: {}\nFile: {}\nLocator: {}\nSHA-256: {}\nExcerpt (untrusted):\n{}\n",
+            "\n{}. Source citation: [PEA:{}]\nDocument: {}\nFile: {}\nLocator: {}\nSHA-256: {}\nExcerpt (untrusted):\n{}\n",
             index + 1,
             fragment_id,
             title,
