@@ -136,7 +136,11 @@ impl PeaRetrievalContext {
         }
         let issued: IssueGrantResponse = serde_json::from_slice(&bytes)
             .map_err(|_| "PEA returned an invalid delegation response".to_string())?;
-        if issued.id.is_empty() || issued.id.len() > 64 || issued.token.len() < 32 || issued.token.len() > 128 {
+        if issued.id.is_empty()
+            || issued.id.len() > 64
+            || issued.token.len() < 32
+            || issued.token.len() > 128
+        {
             return Err("PEA returned an invalid delegation token".to_string());
         }
         Ok(Some(Self {
