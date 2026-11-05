@@ -322,8 +322,7 @@ pub async fn run_scheduled_chat(
                 let Some((snapshot, tool_calls, reasoning, usage)) = completed else {
                     return Err("model returned no completion event".to_string());
                 };
-                let has_tool_calls =
-                    tool_calls.as_ref().is_some_and(|calls| !calls.is_empty());
+                let has_tool_calls = tool_calls.as_ref().is_some_and(|calls| !calls.is_empty());
                 result_sink
                     .save(SaveRequest {
                         snapshot: &snapshot,
