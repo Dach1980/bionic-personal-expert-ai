@@ -56,6 +56,10 @@ All adapter routes require a verified Keycloak token.
 
 The adapter forwards only the upstream status, body and a small allowlist of safe response headers. Multipart uploads are limited to 100 MiB and retain the PEA `Idempotency-Key` contract. PEA remains responsible for authorization, storage-key redaction, content integrity and no-store behavior.
 
+## Agent Runtime implementation design
+
+The detailed source audit, immutable tenant/project context requirements, tool-call continuation lifecycle, PEA search schema, prompt-injection boundary, citation allowlist and acceptance tests are specified in [AGENT_RUNTIME_PEA_SEARCH_DESIGN_2026-11-05.md](AGENT_RUNTIME_PEA_SEARCH_DESIGN_2026-11-05.md). This design is an implementation gate, not a claim that the runtime tool is already active.
+
 ## Agent Runtime integration status
 
 The workspace adapter serves PEA data to the Bionic UI. A tenant/project-scoped lexical search API over SourceFragments and its fixed Bionic proxy route are now implemented in source. This is only the retrieval API boundary: the existing Agent Runtime still uses its standard Bionic tool set and does **not yet invoke the PEA search route as a model tool**. The verified caller token is not yet propagated into a PEA search tool invocation. Semantic/vector retrieval, ACL-before-prompt context assembly, provenance citation validation and document-grounded dialogue tests remain outstanding. Do not describe chat answers as PEA-document-grounded until the server-side Agent Runtime tool and end-to-end evidence tests are implemented. Never solve this by giving the browser direct PEA access or by putting service credentials in a prompt.
