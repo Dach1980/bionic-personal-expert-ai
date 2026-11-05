@@ -259,9 +259,9 @@ pub async fn run_scheduled_chat(
     max_turns: usize,
 ) -> Result<(), String> {
     let result_sink: Arc<dyn ResultSink> = Arc::new(DbResultSink::new(pool.clone()));
-    let user_config = UserConfig::default();
 
-    for turn in 0..max_turns {
+    crate::tool_execution_loop::run_tool_execution_loop(max_turns, |turn| async {
+        let user_config = UserConfig::default();
         let request = create_request(&pool, &current_user, chat_id, &user_config)
             .await
             .map_err(|error| error.to_string())?;
@@ -311,7 +311,7 @@ pub async fn run_scheduled_chat(
         let Some((snapshot, tool_calls, reasoning, usage)) = completed else {
             return Err("model returned no completion event".to_string());
         };
-        let has_tool_calls = tool_calls.is_some();
+        let has_tool_calls = tool_calls.as_ref().is_some_and(|calls| !calls.is_empty());
         result_sink
             .save(SaveRequest {
                 snapshot: &snapshot,
@@ -324,20 +324,18 @@ pub async fn run_scheduled_chat(
             })
             .await;
 
-        if !has_tool_calls {
-            return Ok(());
-        }
-
         tracing::debug!(
             chat_id,
             turn = turn + 1,
-            "Continuing scheduled tool call turn"
+            has_tool_calls,
+            "Scheduled model/tool execution turn completed"
         );
-    }
-
-    Err(format!("scheduled chat exceeded {max_turns} model turns"))
+        Ok(has_tool_calls)
+    })
+    .await
+    .map(|_| ())
+    .map_err(|error| error.to_string())
 }
-
 /// Executes a streaming rig completion and publishes intermediate events.
 pub(crate) async fn stream_chat_with_rig(
     request: RigChatRequest,
