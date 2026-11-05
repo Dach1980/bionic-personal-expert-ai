@@ -19,7 +19,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
-use tool_runtime::{Reasoning, ToolCall};
+use tool_runtime::{PeaRetrievalContext, Reasoning, ToolCall};
 
 use super::{limits, UICompletions};
 
@@ -114,6 +114,7 @@ where
                                 chat_id,
                                 sub: &sub,
                                 status: ChatStatus::Success,
+                                pea_context: None,
                             })
                             .await;
                         Ok(Event::default().data(event_data_for_done()))
@@ -130,6 +131,8 @@ where
                             chat_id,
                             sub: &sub,
                             status: ChatStatus::Error,
+                    pea_context: None,
+                            pea_context: None,
                         })
                         .await;
                     Ok(event_data_for_error(message))
@@ -148,7 +151,7 @@ pub async fn chat_generate(
 ) -> Result<Sse<impl tokio_stream::Stream<Item = Result<Event, axum::Error>>>, CustomError> {
     let result_sink: Arc<dyn ResultSink> = Arc::new(DbResultSink::new(pool.clone()));
 
-    match create_request(&pool, &current_user, chat_id, &user_config).await {
+    match create_request(&pool, &current_user, chat_id, &user_config, None).await {
         Ok(request) => {
             let is_limit_breached =
                 limits::is_limit_exceeded_from_pool(&pool, request.model_id, request.user_id)
@@ -175,6 +178,9 @@ pub async fn chat_generate(
                                 chat_id,
                                 sub: &sub_for_save,
                                 status: ChatStatus::Error,
+                    pea_context: None,
+                                pea_context: None,
+                            pea_context: None,
                             })
                             .await;
                     }
@@ -198,6 +204,9 @@ pub async fn chat_generate(
                                 chat_id,
                                 sub: &sub_for_save,
                                 status: ChatStatus::Error,
+                    pea_context: None,
+                                pea_context: None,
+                            pea_context: None,
                             })
                             .await;
                     }
@@ -220,6 +229,10 @@ pub async fn chat_generate(
                                     chat_id,
                                     sub: &sub_for_save,
                                     status: ChatStatus::Error,
+                    pea_context: None,
+                                    pea_context: None,
+                                pea_context: None,
+                            pea_context: None,
                                 })
                                 .await;
                         }
@@ -243,6 +256,7 @@ pub async fn chat_generate(
                     chat_id,
                     sub: &current_user.sub,
                     status: ChatStatus::Error,
+                    pea_context: None,
                 })
                 .await;
             Err(CustomError::FaultySetup(err.to_string()))
@@ -257,6 +271,7 @@ pub async fn run_scheduled_chat(
     current_user: Jwt,
     chat_id: i32,
     max_turns: usize,
+    pea_context: Option<Arc<PeaRetrievalContext>>,
 ) -> Result<(), String> {
     let result_sink: Arc<dyn ResultSink> = Arc::new(DbResultSink::new(pool.clone()));
     let current_user = Arc::new(current_user);
@@ -265,15 +280,23 @@ pub async fn run_scheduled_chat(
         let pool = pool.clone();
         let current_user = Arc::clone(&current_user);
         let result_sink = Arc::clone(&result_sink);
+        let pea_context = pea_context.clone();
         move |turn| {
             let pool = pool.clone();
             let current_user = Arc::clone(&current_user);
             let result_sink = Arc::clone(&result_sink);
+            let pea_context = pea_context.clone();
             async move {
                 let user_config = UserConfig::default();
-                let request = create_request(&pool, &current_user, chat_id, &user_config)
-                    .await
-                    .map_err(|error| error.to_string())?;
+                let request = create_request(
+                    &pool,
+                    &current_user,
+                    chat_id,
+                    &user_config,
+                    pea_context.as_deref(),
+                )
+                .await
+                .map_err(|error| error.to_string())?;
 
                 if limits::is_limit_exceeded_from_pool(&pool, request.model_id, request.user_id)
                     .await
@@ -289,6 +312,9 @@ pub async fn run_scheduled_chat(
                             chat_id,
                             sub: &current_user.sub,
                             status: ChatStatus::Error,
+                            pea_context: pea_context.clone(),
+                    pea_context: None,
+                            pea_context: None,
                         })
                         .await;
                     return Err(message.to_string());
@@ -332,6 +358,7 @@ pub async fn run_scheduled_chat(
                         chat_id,
                         sub: &current_user.sub,
                         status: ChatStatus::Success,
+                        pea_context: pea_context.clone(),
                     })
                     .await;
 
