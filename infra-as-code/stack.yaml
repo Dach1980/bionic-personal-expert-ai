@@ -73,7 +73,7 @@ spec:
               secret_key: client_secret
           env:
             - name: PEA_OIDC_TOKEN_URL
-              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/token"
+              value: "https://platform.bionic-gpt.com/oidc/realms/bionic-gpt/protocol/openid-connect/token"
             - name: PEA_WORKLOAD_CLIENT_ID
               value: "pea-bionic-worker"
     prod:
@@ -106,7 +106,7 @@ spec:
               secret_key: client_secret
           env:
             - name: PEA_OIDC_TOKEN_URL
-              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/token"
+              value: "https://app.bionic-gpt.com/oidc/realms/bionic-gpt/protocol/openid-connect/token"
             - name: PEA_WORKLOAD_CLIENT_ID
               value: "pea-bionic-worker"
   services:
