@@ -11,10 +11,6 @@ on:
       - 'crates/db/**'
       - 'infra-as-code/**'
       - 'crates/web-pages/**'
-      - 'crates/tool-runtime/**'
-      - 'crates/cron/**'
-      - 'crates/db/**'
-      - 'infra-as-code/**'
       - 'crates/web-assets/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -23,6 +19,11 @@ on:
     branches: [main]
     paths:
       - 'crates/web-server/**'
+      - 'crates/agent-harness/**'
+      - 'crates/tool-runtime/**'
+      - 'crates/cron/**'
+      - 'crates/db/**'
+      - 'infra-as-code/**'
       - 'crates/web-pages/**'
       - 'crates/web-assets/**'
       - 'Cargo.toml'
