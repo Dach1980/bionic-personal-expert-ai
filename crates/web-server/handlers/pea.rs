@@ -32,7 +32,9 @@ pub async fn index(
     Extension(pool): Extension<Pool>,
 ) -> Result<Html<String>, CustomError> {
     let tenant_id = current_user.tenant_id.clone().ok_or_else(|| {
-        CustomError::FaultySetup("Tenant selection is required for the legacy Bionic workspace page".to_string())
+        CustomError::FaultySetup(
+            "Tenant selection is required for the legacy Bionic workspace page".to_string(),
+        )
     })?;
     let mut client = pool.get().await?;
     let transaction = client.transaction().await?;
@@ -754,7 +756,10 @@ mod tests {
     fn tenant_context_is_derived_only_from_canonical_tenant_scoped_paths() {
         let tenant_id = Uuid::new_v4().to_string();
         let path = format!("/api/v1/tenants/{tenant_id}/projects");
-        assert_eq!(tenant_id_from_upstream_path(&path), Some(tenant_id.as_str()));
+        assert_eq!(
+            tenant_id_from_upstream_path(&path),
+            Some(tenant_id.as_str())
+        );
         assert_eq!(tenant_id_from_upstream_path("/api/v1/tenants"), None);
         assert_eq!(
             tenant_id_from_upstream_path("/api/v1/tenants/not-a-uuid/projects"),
