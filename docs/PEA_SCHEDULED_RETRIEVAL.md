@@ -47,6 +47,14 @@ Configure only the Bionic **cron** service:
 
 The setup template is `infra-as-code/stack.yaml`; local development values are in `infra-as-code/.env.example`. Never put the client secret in Git, browser configuration, model prompts, logs or scheduled task text.
 
+For a local Stack dev namespace, after generating the secret in Keycloak, create/update the Kubernetes secret without putting its value in a command history or Git file. For example, load it from a protected shell variable and apply it to namespace `bionic-gpt`:
+
+```powershell
+kubectl -n bionic-gpt create secret generic pea-bionic-worker --from-literal=client_secret="$env:PEA_WORKLOAD_CLIENT_SECRET" --dry-run=client -o yaml | kubectl apply -f -
+```
+
+For UAT/production, use the deployment's managed secret store and the same secret name/key expected by the Stack manifest.
+
 PEA must independently be configured with:
 
 - `PEA_WORKLOAD_CLIENT_ID=pea-bionic-worker`;
