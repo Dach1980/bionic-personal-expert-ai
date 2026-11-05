@@ -14,6 +14,7 @@ pub(crate) struct SaveRequest<'a> {
     pub(crate) chat_id: i32,
     pub(crate) sub: &'a str,
     pub(crate) status: ChatStatus,
+    pub(crate) pea_context: Option<Arc<PeaRetrievalContext>>,
 }
 
 #[async_trait]
@@ -47,6 +48,7 @@ async fn save_results_db(pool: &Pool, request: SaveRequest<'_>) {
         chat_id,
         sub,
         status,
+        pea_context,
     } = request;
 
     let mut db_client = match pool.get().await {
@@ -187,12 +189,13 @@ async fn save_results_db(pool: &Pool, request: SaveRequest<'_>) {
 
         if status == ChatStatus::Success {
             if !executable_tool_calls.is_empty() {
-                let tool_call_results = execute_tool_calls(
+                let tool_call_results = execute_tool_calls_with_pea_context(
                     executable_tool_calls,
                     pool,
                     sub.to_string(),
                     chat.conversation_id,
                     chat.model_id,
+                    pea_context,
                 )
                 .await;
 
