@@ -6,7 +6,15 @@ on:
     paths:
       - 'crates/web-server/**'
       - 'crates/agent-harness/**'
+      - 'crates/tool-runtime/**'
+      - 'crates/cron/**'
+      - 'crates/db/**'
+      - 'infra-as-code/**'
       - 'crates/web-pages/**'
+      - 'crates/tool-runtime/**'
+      - 'crates/cron/**'
+      - 'crates/db/**'
+      - 'infra-as-code/**'
       - 'crates/web-assets/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -66,6 +74,10 @@ jobs:
         run: cargo test -p web-server --locked
       - name: Run Agent Runtime authentication and dialogue tests
         run: cargo test -p agent-harness --locked
+      - name: Compile scheduled task worker
+        run: cargo check -p cron --locked
+      - name: Run tool runtime tests
+        run: cargo test -p tool-runtime --locked
   web-assets:
     runs-on: ubuntu-latest
     defaults:
