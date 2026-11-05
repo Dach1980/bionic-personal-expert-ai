@@ -1,6 +1,6 @@
 use crate::builtin_tools;
 use crate::types::{ToolCall, ToolResult, ToolResultContent};
-use crate::ToolDyn;
+use crate::{PeaRetrievalContext, PeaSearchTool, ToolDyn};
 use db::Pool;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -14,11 +14,33 @@ pub async fn execute_tool_calls(
     conversation_id: i64,
     model_id: i32,
 ) -> Vec<ToolResult> {
-    info!("Executing {} tool calls", tool_calls.len());
+    execute_tool_calls_with_pea_context(
+        tool_calls,
+        pool,
+        sub,
+        conversation_id,
+        model_id,
+        None,
+    )
+    .await
+}
 
-    // Get tool instances with the pool for execution
+/// Execute ordinary tools plus pea_search only when a trusted scheduled-task
+/// retrieval context was created by the server.
+pub async fn execute_tool_calls_with_pea_context(
+    tool_calls: Vec<ToolCall>,
+    pool: &Pool,
+    sub: String,
+    conversation_id: i64,
+    model_id: i32,
+    pea_context: Option<Arc<PeaRetrievalContext>>,
+) -> Vec<ToolResult> {
+    info!("Executing {} tool calls", tool_calls.len());
     debug!("Getting tool instances");
-    let tools = get_tools(pool, sub.clone(), conversation_id, model_id).await;
+    let mut tools = get_tools(pool, sub.clone(), conversation_id, model_id).await;
+    if let Some(context) = pea_context {
+        tools.push(Arc::new(PeaSearchTool::new(context)));
+    }
     debug!("Got {} tool instances", tools.len());
 
     let mut tool_results: Vec<ToolResult> = Vec::new();
