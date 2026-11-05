@@ -23,7 +23,7 @@ The model can provide only:
 
 The model cannot provide or override tenant ID, PEA project UUID, Bionic project ID, scheduled task ID, owner subject, Bionic instance ID, grant token, API URL or Keycloak credentials.
 
-Search results retain source fragment IDs, document title, original filename, locator and content hash. Excerpts are labelled as untrusted source material. The system prompt instructs the model not to follow commands embedded in retrieved documents and to cite only exact returned fragment IDs.
+Search results retain source fragment IDs, document/version IDs, title, original filename, locator and content hash. Before the final scheduled answer is persisted, Bionic removes any `[PEA:...]` citation marker that does not match a fragment returned during that run. Excerpts are labelled as untrusted source material. The system prompt instructs the model not to follow commands embedded in retrieved documents and to cite only exact returned fragment IDs using `[PEA:<fragment_id>]` markers.
 
 ## Failure behavior
 
