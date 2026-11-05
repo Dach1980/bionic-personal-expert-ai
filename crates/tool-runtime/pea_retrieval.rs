@@ -238,6 +238,7 @@ impl PeaRetrievalContext {
         }
         let payload: Value = serde_json::from_slice(&bytes)
             .map_err(|_| "PEA returned an invalid search response".to_string())?;
+        let formatted = format_search_results(&payload, top_k as usize)?;
         let results = payload
             .get("results")
             .and_then(Value::as_array)
@@ -249,8 +250,7 @@ impl PeaRetrievalContext {
         for result in results {
             allowed.insert(required_string(result, "fragment_id")?.to_string());
         }
-        drop(allowed);
-        format_search_results(&payload, top_k as usize)
+        Ok(formatted)
     }
 
     /// Remove citation markers that do not refer to a fragment returned in this
