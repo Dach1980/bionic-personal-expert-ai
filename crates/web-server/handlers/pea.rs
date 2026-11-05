@@ -228,6 +228,22 @@ async fn get_session(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static 
     proxy_get("/api/v1/session".to_string(), user).await
 }
 
+async fn list_tenants(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get("/api/v1/tenants".to_string(), user).await
+}
+
+async fn get_admin_me(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get("/api/v1/admin/me".to_string(), user).await
+}
+
+async fn list_admin_audit_events(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get("/api/v1/admin/audit-events".to_string(), user).await
+}
+
+async fn list_admin_tenants(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_get("/api/v1/admin/tenants".to_string(), user).await
+}
+
 async fn get_current_projects(user: Jwt) -> Result<Response<Body>, (StatusCode, &'static str)> {
     proxy_get("/api/v1/projects".to_string(), user).await
 }
@@ -371,6 +387,7 @@ async fn upload_document_version(
             base_url.trim_end_matches('/')
         ))
         .bearer_auth(user.access_token)
+        .header("X-Tenant-ID", tenant_id.to_string())
         .header("Idempotency-Key", idempotency_key)
         .multipart(form)
         .send()
@@ -431,6 +448,7 @@ async fn enqueue_processing(
             base_url.trim_end_matches('/')
         ))
         .bearer_auth(user.access_token)
+        .header("X-Tenant-ID", tenant_id.to_string())
         .header("Idempotency-Key", idempotency_key)
         .json(&payload)
         .send()
@@ -651,6 +669,10 @@ pub fn routes() -> Router {
     Router::new()
         .typed_get(index)
         .route("/api/pea/session", get(get_session))
+        .route("/api/pea/tenants", get(list_tenants))
+        .route("/api/pea/admin/me", get(get_admin_me))
+        .route("/api/pea/admin/audit-events", get(list_admin_audit_events))
+        .route("/api/pea/admin/tenants", get(list_admin_tenants))
         .route("/api/pea/projects", get(get_current_projects))
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/conversations",
