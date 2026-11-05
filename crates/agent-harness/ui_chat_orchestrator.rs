@@ -114,7 +114,7 @@ where
                                 chat_id,
                                 sub: &sub,
                                 status: ChatStatus::Success,
-                                pea_context: None,
+                            pea_context: None,
                             })
                             .await;
                         Ok(Event::default().data(event_data_for_done()))
@@ -131,7 +131,6 @@ where
                             chat_id,
                             sub: &sub,
                             status: ChatStatus::Error,
-                    pea_context: None,
                             pea_context: None,
                         })
                         .await;
@@ -178,8 +177,6 @@ pub async fn chat_generate(
                                 chat_id,
                                 sub: &sub_for_save,
                                 status: ChatStatus::Error,
-                    pea_context: None,
-                                pea_context: None,
                             pea_context: None,
                             })
                             .await;
@@ -204,8 +201,6 @@ pub async fn chat_generate(
                                 chat_id,
                                 sub: &sub_for_save,
                                 status: ChatStatus::Error,
-                    pea_context: None,
-                                pea_context: None,
                             pea_context: None,
                             })
                             .await;
@@ -229,9 +224,6 @@ pub async fn chat_generate(
                                     chat_id,
                                     sub: &sub_for_save,
                                     status: ChatStatus::Error,
-                    pea_context: None,
-                                    pea_context: None,
-                                pea_context: None,
                             pea_context: None,
                                 })
                                 .await;
@@ -256,7 +248,7 @@ pub async fn chat_generate(
                     chat_id,
                     sub: &current_user.sub,
                     status: ChatStatus::Error,
-                    pea_context: None,
+                            pea_context: pea_context.clone(),
                 })
                 .await;
             Err(CustomError::FaultySetup(err.to_string()))
@@ -313,8 +305,6 @@ pub async fn run_scheduled_chat(
                             sub: &current_user.sub,
                             status: ChatStatus::Error,
                             pea_context: pea_context.clone(),
-                    pea_context: None,
-                            pea_context: None,
                         })
                         .await;
                     return Err(message.to_string());
@@ -358,7 +348,7 @@ pub async fn run_scheduled_chat(
                         chat_id,
                         sub: &current_user.sub,
                         status: ChatStatus::Success,
-                        pea_context: pea_context.clone(),
+                            pea_context: pea_context.clone(),
                     })
                     .await;
 
