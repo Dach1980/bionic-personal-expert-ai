@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use db::{queries, ChatRole, ChatStatus, Pool};
 use rig::completion::Usage;
+use std::sync::Arc;
 use tool_runtime::{
-    execute_tool_calls, serialize_assistant_tool_state, Reasoning, ToolCall, ToolResultContent,
+    execute_tool_calls_with_pea_context, serialize_assistant_tool_state, PeaRetrievalContext, Reasoning, ToolCall, ToolResultContent,
 };
 
 pub(crate) struct SaveRequest<'a> {
