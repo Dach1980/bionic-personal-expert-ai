@@ -284,7 +284,7 @@ mod tests {
         JwtClaims {
             sub: "keycloak-subject".to_string(),
             email: "user@example.test".to_string(),
-            tenant_id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: Some(uuid::Uuid::new_v4().to_string()),
             given_name: None,
             family_name: None,
             exp: now + 300,
@@ -389,7 +389,7 @@ mod tests {
         .is_err());
 
         let mut malformed_tenant = test_claims(now);
-        malformed_tenant.tenant_id = "not-a-uuid".to_string();
+        malformed_tenant.tenant_id = Some("not-a-uuid".to_string());
         assert!(validate_claims(
             &malformed_tenant,
             "https://sso.example.test/realms/bionic-gpt",
@@ -397,6 +397,20 @@ mod tests {
             now
         )
         .is_err());
+    }
+
+    #[test]
+    fn identity_tokens_without_tenant_claim_are_accepted() {
+        let now = 1_800_000_000;
+        let mut identity_only = test_claims(now);
+        identity_only.tenant_id = None;
+        assert!(validate_claims(
+            &identity_only,
+            "https://sso.example.test/realms/bionic-gpt",
+            "pea-api",
+            now
+        )
+        .is_ok());
     }
 
     #[test]
