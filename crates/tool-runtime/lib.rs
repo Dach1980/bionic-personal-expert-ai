@@ -8,8 +8,8 @@ mod connector_functions;
 mod connector_network;
 mod lazy_fs;
 pub mod mcp_client;
-pub mod pea_retrieval;
 pub mod openapi_tool_factory;
+pub mod pea_retrieval;
 mod sandbox_io;
 pub mod scheduled_tasks;
 pub mod skills;
@@ -38,11 +38,13 @@ pub use connector_network::{
     connector_prompt_for_conversation, connector_skill_catalogue_for_team, ConnectorSkillCatalogue,
 };
 pub use openapi_tool_factory::{BionicOpenAPI, IntegrationTools, OAuth2Config};
+pub use pea_retrieval::{pea_search_definition, PeaRetrievalContext, PeaSearchTool};
 pub use tool_auth::{OAuth2TokenProvider, StaticTokenProvider, TokenProvider};
 pub use tool_catalog::get_chat_tool_definitions;
 pub use tool_contract::{ToolDyn, ToolError};
-pub use pea_retrieval::{pea_search_definition, PeaRetrievalContext, PeaSearchTool};
-pub use tool_dispatcher::{execute_tool_call_with_tools, execute_tool_calls, execute_tool_calls_with_pea_context};
+pub use tool_dispatcher::{
+    execute_tool_call_with_tools, execute_tool_calls, execute_tool_calls_with_pea_context,
+};
 pub use types::{
     parse_reasoning, parse_tool_calls, serialize_assistant_tool_state, Reasoning,
     StoredAssistantToolState, ToolCall, ToolCallFunction, ToolDefinition, ToolName, ToolResult,
