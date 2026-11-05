@@ -35,5 +35,6 @@ mod tests {
         assert!(!names.contains(&"list_datasets"));
         assert!(!names.contains(&"list_dataset_files"));
         assert!(!names.contains(&"search_context"));
+        assert!(!names.contains(&"pea_search"));
     }
 }
