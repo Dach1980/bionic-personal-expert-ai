@@ -81,7 +81,8 @@ impl Audience {
 struct JwtClaims {
     sub: String,
     email: String,
-    tenant_id: String,
+    #[serde(default)]
+    tenant_id: Option<String>,
     given_name: Option<String>,
     family_name: Option<String>,
     exp: u64,
