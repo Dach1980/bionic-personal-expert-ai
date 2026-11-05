@@ -189,6 +189,42 @@ async fn execute_task_inner(
         .map_err(|error| error.to_string())?;
     tx.commit().await.map_err(|error| error.to_string())?;
 
+    let pea_context = if let Some(project_id) = task.project_id {
+        match tool_runtime::PeaRetrievalContext::issue_for_scheduled_task(
+            project_id,
+            task.id,
+            sub.clone(),
+        )
+        .await
+        {
+            Ok(Some(context)) => {
+                tracing::info!(
+                    task_id = task.id,
+                    project_id,
+                    "PEA retrieval context authorized for scheduled task"
+                );
+                Some(Arc::new(context))
+            }
+            Ok(None) => {
+                tracing::debug!(
+                    task_id = task.id,
+                    "PEA retrieval is not configured; scheduled task continues without pea_search"
+                );
+                None
+            }
+            Err(error) => {
+                tracing::warn!(
+                    task_id = task.id,
+                    %error,
+                    "PEA retrieval context was not authorized; scheduled task continues without pea_search"
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     agent_harness::ui_chat_orchestrator::run_scheduled_chat(
         pool.clone(),
         Jwt {
@@ -199,6 +235,7 @@ async fn execute_task_inner(
         },
         chat_id,
         max_turns,
+        pea_context,
     )
     .await
     .map_err(|error| error.to_string())?;
