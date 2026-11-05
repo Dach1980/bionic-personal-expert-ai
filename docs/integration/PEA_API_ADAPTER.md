@@ -32,6 +32,7 @@ All adapter routes require a verified Keycloak token.
 | `GET /api/pea/session` | Verified user and tenant session |
 | `GET /api/pea/projects` | Current user's authorized project list |
 | `GET /api/pea/tenants/{tenant_id}/projects` | Project list |
+| `POST /api/pea/tenants/{tenant_id}/projects/{project_id}/search` | ACL-scoped lexical SourceFragment search (API/proxy only; not yet an Agent Runtime tool) |
 | `GET /api/pea/tenants/{tenant_id}/projects/{project_id}/conversations` | Conversation list |
 | `POST /api/pea/tenants/{tenant_id}/projects/{project_id}/conversations` | Create conversation |
 | `GET/POST .../conversations/{conversation_id}/messages` | Read history / stream local-model SSE response |
