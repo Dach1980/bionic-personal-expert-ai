@@ -21,7 +21,7 @@ const JWKS_CACHE_TTL: Duration = Duration::from_secs(300);
 pub struct Jwt {
     pub sub: String,
     pub email: String,
-    pub tenant_id: String,
+    pub tenant_id: Option<String>,
     pub given_name: Option<String>,
     pub family_name: Option<String>,
     #[serde(skip)]
