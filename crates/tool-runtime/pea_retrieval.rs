@@ -127,7 +127,9 @@ impl PeaRetrievalContext {
         let status = response.status();
         let bytes = read_bounded_body(response).await?;
         if !status.is_success() {
-            return Err(format!("PEA declined scheduled retrieval delegation (HTTP {status})"));
+            return Err(format!(
+                "PEA declined scheduled retrieval delegation (HTTP {status})"
+            ));
         }
         let issued: IssueGrantResponse = serde_json::from_slice(&bytes)
             .map_err(|_| "PEA returned an invalid delegation response".to_string())?;
@@ -156,7 +158,9 @@ impl PeaRetrievalContext {
         let status = response.status();
         let bytes = read_bounded_body(response).await?;
         if !status.is_success() {
-            return Err(format!("Keycloak declined Bionic workload authentication (HTTP {status})"));
+            return Err(format!(
+                "Keycloak declined Bionic workload authentication (HTTP {status})"
+            ));
         }
         let token: TokenResponse = serde_json::from_slice(&bytes)
             .map_err(|_| "Keycloak returned an invalid workload token response".to_string())?;
@@ -189,7 +193,9 @@ impl PeaRetrievalContext {
         let status = response.status();
         let bytes = read_bounded_body(response).await?;
         if !status.is_success() {
-            return Err(format!("PEA search was denied or unavailable (HTTP {status})"));
+            return Err(format!(
+                "PEA search was denied or unavailable (HTTP {status})"
+            ));
         }
         let payload: Value = serde_json::from_slice(&bytes)
             .map_err(|_| "PEA returned an invalid search response".to_string())?;
@@ -202,10 +208,18 @@ fn validate_url(value: &str, name: &str) -> Result<String, String> {
     let local_http = parsed.scheme() == "http"
         && matches!(
             parsed.host_str(),
-            Some("localhost" | "127.0.0.1" | "::1" | "host.docker.internal" | "keycloak-service.keycloak.svc.cluster.local")
+            Some(
+                "localhost"
+                    | "127.0.0.1"
+                    | "::1"
+                    | "host.docker.internal"
+                    | "keycloak-service.keycloak.svc.cluster.local"
+            )
         );
     if parsed.scheme() != "https" && !local_http {
-        return Err(format!("{name} must use HTTPS (HTTP is allowed only for loopback development)"));
+        return Err(format!(
+            "{name} must use HTTPS (HTTP is allowed only for configured local endpoints)"
+        ));
     }
     if parsed.username() != "" || parsed.password().is_some() {
         return Err(format!("{name} must not contain embedded credentials"));
@@ -269,7 +283,8 @@ fn format_search_results(payload: &Value, max_results: usize) -> Result<String, 
         ));
     }
     if payload.get("truncated").and_then(Value::as_bool) == Some(true) {
-        output.push_str("\nMore matches exist; narrow the query if additional evidence is needed.\n");
+        output
+            .push_str("\nMore matches exist; narrow the query if additional evidence is needed.\n");
     }
     Ok(output)
 }
@@ -319,8 +334,7 @@ impl ToolDyn for PeaSearchTool {
 
     fn call(&self, args: String) -> WasmBoxedFuture<'_, Result<String, ToolError>> {
         Box::pin(async move {
-            let args: PeaSearchArgs =
-                serde_json::from_str(&args).map_err(ToolError::JsonError)?;
+            let args: PeaSearchArgs = serde_json::from_str(&args).map_err(ToolError::JsonError)?;
             let query = args.query.trim();
             if query.len() < 2 || query.len() > 1000 || args.top_k == 0 || args.top_k > 20 {
                 return Err(ToolError::ToolCallError(Box::new(std::io::Error::other(
@@ -330,9 +344,7 @@ impl ToolDyn for PeaSearchTool {
             self.context
                 .search(query, args.top_k)
                 .await
-                .map_err(|error| {
-                    ToolError::ToolCallError(Box::new(std::io::Error::other(error)))
-                })
+                .map_err(|error| ToolError::ToolCallError(Box::new(std::io::Error::other(error))))
         })
     }
 }
