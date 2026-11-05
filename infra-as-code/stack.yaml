@@ -28,6 +28,18 @@ spec:
               value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/certs"
             - name: PEA_API_BASE_URL
               value: "http://host.docker.internal:8000"
+        cron:
+          env:
+            - name: PEA_API_BASE_URL
+              value: "http://host.docker.internal:8000"
+            - name: PEA_OIDC_TOKEN_URL
+              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/token"
+            - name: PEA_WORKLOAD_CLIENT_ID
+              value: "pea-bionic-worker"
+          secret_env:
+            - name: PEA_WORKLOAD_CLIENT_SECRET
+              secret_name: pea-bionic-worker
+              secret_key: client_secret
         integration-simulator:
           image: ghcr.io/bionic-gpt/integration-simulator:1.13.4
           port: 8080
@@ -51,6 +63,19 @@ spec:
               value: "pea-api"
             - name: OIDC_JWKS_URL
               value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/certs"
+        cron:
+          secret_env:
+            - name: PEA_API_BASE_URL
+              secret_name: pea-api-connection
+              secret_key: base_url
+            - name: PEA_WORKLOAD_CLIENT_SECRET
+              secret_name: pea-bionic-worker
+              secret_key: client_secret
+          env:
+            - name: PEA_OIDC_TOKEN_URL
+              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/token"
+            - name: PEA_WORKLOAD_CLIENT_ID
+              value: "pea-bionic-worker"
     prod:
       components:
         oidc:
@@ -71,6 +96,19 @@ spec:
               value: "pea-api"
             - name: OIDC_JWKS_URL
               value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/certs"
+        cron:
+          secret_env:
+            - name: PEA_API_BASE_URL
+              secret_name: pea-api-connection
+              secret_key: base_url
+            - name: PEA_WORKLOAD_CLIENT_SECRET
+              secret_name: pea-bionic-worker
+              secret_key: client_secret
+          env:
+            - name: PEA_OIDC_TOKEN_URL
+              value: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/bionic-gpt/protocol/openid-connect/token"
+            - name: PEA_WORKLOAD_CLIENT_ID
+              value: "pea-bionic-worker"
   services:
     web:
       image: ghcr.io/bionic-gpt/bionicgpt:1.13.4
