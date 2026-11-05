@@ -31,7 +31,9 @@ pub async fn index(
     current_user: Jwt,
     Extension(pool): Extension<Pool>,
 ) -> Result<Html<String>, CustomError> {
-    let tenant_id = current_user.tenant_id.clone().unwrap_or_default();
+    let tenant_id = current_user.tenant_id.clone().ok_or_else(|| {
+        CustomError::FaultySetup("Tenant selection is required for the legacy Bionic workspace page".to_string())
+    })?;
     let mut client = pool.get().await?;
     let transaction = client.transaction().await?;
     let (rbac, _team_id_num) =
