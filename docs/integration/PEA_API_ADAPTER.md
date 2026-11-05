@@ -60,9 +60,30 @@ The adapter forwards only the upstream status, body and a small allowlist of saf
 
 The detailed source audit, immutable tenant/project context requirements, tool-call continuation lifecycle, PEA search schema, prompt-injection boundary, citation allowlist and acceptance tests are specified in [AGENT_RUNTIME_PEA_SEARCH_DESIGN_2026-11-05.md](AGENT_RUNTIME_PEA_SEARCH_DESIGN_2026-11-05.md). This design is an implementation gate, not a claim that the runtime tool is already active.
 
-## Agent Runtime integration status
+## Agent Runtime integration status — reconciled with source at 2026-11-06
 
-The workspace adapter serves PEA data to the Bionic UI. A tenant/project-scoped lexical search API over SourceFragments and its fixed Bionic proxy route are now implemented in source. This is only the retrieval API boundary: the existing Agent Runtime still uses its standard Bionic tool set and does **not yet invoke the PEA search route as a model tool**. The verified caller token is not yet propagated into a PEA search tool invocation. Semantic/vector retrieval, ACL-before-prompt context assembly, provenance citation validation and document-grounded dialogue tests remain outstanding. Do not describe chat answers as PEA-document-grounded until the server-side Agent Runtime tool and end-to-end evidence tests are implemented. Never solve this by giving the browser direct PEA access or by putting service credentials in a prompt.
+There are now two distinct runtime paths; do not conflate them.
+
+### Scheduled-task runtime: source implementation present
+
+- `PeaRetrievalContext::issue_for_scheduled_task` obtains a short-lived workload token using the confidential Bionic worker client (`PEA_WORKLOAD_CLIENT_ID` / `PEA_WORKLOAD_CLIENT_SECRET`, scope `pea-api-context`).
+- Bionic requests a PEA-owned delegation grant bound to Bionic project, scheduled task and owner subject. PEA stores only the token hash and checks the active project binding, active owner identity, tenant membership, project access, expiry and revocation.
+- The model-facing `pea_search` schema exposes only `query` and bounded `top_k`; tenant/project/task/owner/grant values remain server-owned.
+- Retrieved fragments are explicitly labelled untrusted source material. Citation IDs are allowlisted from the successful PEA response and final `[PEA:<fragment_id>]` markers are checked against that allowlist.
+- `run_scheduled_chat` uses a bounded model/tool continuation loop and persists tool-call results before the next model turn.
+
+This is source-level implementation. It still requires current-HEAD Rust CI and live Keycloak → Bionic worker → PEA → PostgreSQL acceptance, including grant expiry/revocation and cross-project negative tests.
+
+### Interactive workspace chat: not yet integrated
+
+- The public `/completions/{chat_id}` handler calls `create_request(..., None)`, so it does not receive a PEA retrieval context and does not expose `pea_search`.
+- The browser-facing chat path therefore cannot search PEA documents through this scheduled-task delegation mechanism.
+- The current scheduled-task grant contract uses `bionic_task_id`; do not repurpose it as a conversation ID without an explicit schema/API contract and security review.
+- Interactive document-grounded chat requires a separate server-owned conversation/project context and an explicit grant lifecycle, followed by a bounded tool continuation path that streams final text/citations to the browser.
+
+Semantic/vector retrieval, embeddings and reranking remain future work after the lexical baseline and evaluation corpus are accepted.
+
+**Acceptance rule:** only scheduled tasks with a valid PEA delegation context may currently be described as having source-level `pea_search` integration. Do not describe ordinary interactive chat as document-grounded until its separate integration and live end-to-end tests pass. Never solve this by giving the browser direct PEA access or by putting service credentials in a prompt.
 
 ## Important deployment note
 
