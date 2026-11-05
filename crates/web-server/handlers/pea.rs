@@ -747,7 +747,6 @@ pub fn routes() -> Router {
         )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
