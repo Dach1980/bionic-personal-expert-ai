@@ -14,15 +14,8 @@ pub async fn execute_tool_calls(
     conversation_id: i64,
     model_id: i32,
 ) -> Vec<ToolResult> {
-    execute_tool_calls_with_pea_context(
-        tool_calls,
-        pool,
-        sub,
-        conversation_id,
-        model_id,
-        None,
-    )
-    .await
+    execute_tool_calls_with_pea_context(tool_calls, pool, sub, conversation_id, model_id, None)
+        .await
 }
 
 /// Execute ordinary tools plus pea_search only when a trusted scheduled-task
