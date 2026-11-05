@@ -188,5 +188,5 @@ Required server environment:
 
 Adapter routes cover session, projects, conversations/messages (including SSE), document creation/version upload, processing run status/enqueue, source fragments, artifacts, reviews, findings and evidence. Uploads are capped at 100 MiB at the adapter boundary and forwarded with the caller's verified Bearer token and idempotency key.
 
-The browser token is a user access token, not a service credential. Never trust tenant/user headers from the browser; identity and tenant context are derived from the verified JWT and checked again by PEA.
+The browser token is a user access token, not a service credential. The `tenant_id` claim is optional legacy context, not a grant. The Web client discovers memberships through `/api/pea/tenants`; the adapter derives the selected `X-Tenant-ID` from its fixed tenant-scoped route and PEA checks membership again. Never trust user identity or forwarded-token headers from the browser.
 
