@@ -6,10 +6,10 @@ pub mod limits;
 pub mod moderation;
 mod request_recorder;
 mod result_sink;
-mod tool_execution_loop;
 pub mod synthesize;
 #[cfg(test)]
 mod tests;
+mod tool_execution_loop;
 pub mod ui_chat_orchestrator;
 #[cfg(test)]
 mod ui_chat_orchestrator_tests;
