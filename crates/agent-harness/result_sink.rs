@@ -218,7 +218,7 @@ async fn save_results_db(pool: &Pool, request: SaveRequest<'_>) {
                     sub.to_string(),
                     chat.conversation_id,
                     chat.model_id,
-                    pea_context,
+                    pea_context_for_dispatch,
                 )
                 .await;
 
