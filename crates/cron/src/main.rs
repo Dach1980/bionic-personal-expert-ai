@@ -225,20 +225,34 @@ async fn execute_task_inner(
         None
     };
 
-    agent_harness::ui_chat_orchestrator::run_scheduled_chat(
+    let cleanup_context = pea_context.clone();
+    let run_result = agent_harness::ui_chat_orchestrator::run_scheduled_chat(
         pool.clone(),
         Jwt {
             sub,
             email,
             given_name: None,
             family_name: None,
+            tenant_id: None,
+            access_token: String::new(),
         },
         chat_id,
         max_turns,
         pea_context,
     )
-    .await
-    .map_err(|error| error.to_string())?;
+    .await;
+
+    if let Some(context) = cleanup_context {
+        if let Err(error) = context.revoke().await {
+            tracing::warn!(
+                task_id = task.id,
+                %error,
+                "Failed to revoke scheduled PEA delegation; the grant will expire automatically"
+            );
+        }
+    }
+
+    run_result.map_err(|error| error.to_string())?;
     mark_run_completed(pool, run_id, conversation_id).await
 }
 
