@@ -574,6 +574,19 @@ async fn get_source_fragment(
     .await
 }
 
+async fn search_project_sources(
+    Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
+    user: Jwt,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_post(
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}/search"),
+        user,
+        payload,
+    )
+    .await
+}
+
 async fn list_knowledge(
     Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
     user: Jwt,
@@ -630,6 +643,10 @@ pub fn routes() -> Router {
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/conversations/{conversation_id}/messages",
             get(list_conversation_messages).post(send_conversation_message),
+        )
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}/search",
+            post(search_project_sources),
         )
         .route("/api/pea/tenants/{tenant_id}/projects", get(list_projects))
         .route(
