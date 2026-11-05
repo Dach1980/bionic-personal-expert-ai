@@ -18,6 +18,12 @@ struct WorkspaceTab {
     tab: Option<String>,
 }
 
+fn tenant_id_from_upstream_path(path: &str) -> Option<&str> {
+    let tenant_id = path.strip_prefix("/api/v1/tenants/")?.split('/').next()?;
+    Uuid::parse_str(tenant_id).ok()?;
+    Some(tenant_id)
+}
+
 pub async fn index(
     web_pages::routes::pea::Index { team_id }: web_pages::routes::pea::Index,
     Query(query): Query<WorkspaceTab>,
@@ -53,9 +59,11 @@ async fn proxy_get(path: String, user: Jwt) -> Result<Response<Body>, (StatusCod
                 "PEA API client could not be initialized",
             )
         })?;
-    let mut upstream = client
-        .get(url)
-        .bearer_auth(user.access_token)
+    let mut request = client.get(url).bearer_auth(user.access_token);
+    if let Some(tenant_id) = tenant_id_from_upstream_path(&path) {
+        request = request.header("X-Tenant-ID", tenant_id);
+    }
+    let mut upstream = request
         .send()
         .await
         .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
@@ -129,9 +137,13 @@ async fn proxy_post(
                 "PEA API client could not be initialized",
             )
         })?;
-    let upstream = client
+    let mut request = client
         .post(format!("{}{}", base_url.trim_end_matches('/'), path))
-        .bearer_auth(user.access_token)
+        .bearer_auth(user.access_token);
+    if let Some(tenant_id) = tenant_id_from_upstream_path(&path) {
+        request = request.header("X-Tenant-ID", tenant_id);
+    }
+    let upstream = request
         .json(&payload)
         .send()
         .await
@@ -183,9 +195,13 @@ async fn proxy_post_stream(
                 "PEA API client could not be initialized",
             )
         })?;
-    let upstream = client
+    let mut request = client
         .post(format!("{}{}", base_url.trim_end_matches('/'), path))
-        .bearer_auth(user.access_token)
+        .bearer_auth(user.access_token);
+    if let Some(tenant_id) = tenant_id_from_upstream_path(&path) {
+        request = request.header("X-Tenant-ID", tenant_id);
+    }
+    let upstream = request
         .json(&payload)
         .send()
         .await
