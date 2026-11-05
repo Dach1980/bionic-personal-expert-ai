@@ -52,6 +52,28 @@ async fn save_results_db(pool: &Pool, request: SaveRequest<'_>) {
         pea_context,
     } = request;
 
+    let validated_snapshot = if tool_calls.is_none() {
+        pea_context
+            .as_ref()
+            .map(|context| context.validate_citations(snapshot))
+    } else {
+        None
+    };
+    if validated_snapshot
+        .as_ref()
+        .is_some_and(|(_, had_invalid)| *had_invalid)
+    {
+        tracing::warn!(
+            chat_id,
+            "Removed PEA citation markers that were not returned by this scheduled retrieval context"
+        );
+    }
+    let snapshot = validated_snapshot
+        .as_ref()
+        .map(|(value, _)| value.as_str())
+        .unwrap_or(snapshot);
+    let pea_context_for_dispatch = pea_context.clone();
+
     let mut db_client = match pool.get().await {
         Ok(client) => client,
         Err(e) => {
