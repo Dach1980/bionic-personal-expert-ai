@@ -10,7 +10,7 @@ use std::time::Duration;
 
 const MAX_RESPONSE_BYTES: usize = 1024 * 1024;
 const MAX_RESULTS: usize = 20;
-const GRANT_TTL_SECONDS: u32 = 900;
+const GRANT_TTL_SECONDS: u32 = 3600;
 
 /// Server-created context for one scheduled task. All project and owner fields
 /// are private and never come from model-supplied tool arguments.
@@ -21,6 +21,7 @@ pub struct PeaRetrievalContext {
     token_url: String,
     client_id: String,
     client_secret: String,
+    grant_id: String,
     grant_token: String,
     bionic_project_id: i32,
     bionic_task_id: i64,
@@ -37,6 +38,7 @@ struct IssueGrantRequest<'a> {
 
 #[derive(Deserialize)]
 struct IssueGrantResponse {
+    id: String,
     token: String,
 }
 
@@ -102,6 +104,7 @@ impl PeaRetrievalContext {
             token_url,
             client_id,
             client_secret,
+            grant_id: String::new(),
             grant_token: String::new(),
             bionic_project_id,
             bionic_task_id,
@@ -133,13 +136,42 @@ impl PeaRetrievalContext {
         }
         let issued: IssueGrantResponse = serde_json::from_slice(&bytes)
             .map_err(|_| "PEA returned an invalid delegation response".to_string())?;
-        if issued.token.len() < 32 || issued.token.len() > 128 {
+        if issued.id.is_empty() || issued.id.len() > 64 || issued.token.len() < 32 || issued.token.len() > 128 {
             return Err("PEA returned an invalid delegation token".to_string());
         }
         Ok(Some(Self {
+            grant_id: issued.id,
             grant_token: issued.token,
             ..context
         }))
+    }
+
+    /// Revoke the per-run grant after the scheduled Tool Execution Loop finishes.
+    /// The grant's short TTL remains the fallback if the worker exits unexpectedly.
+    pub async fn revoke(&self) -> Result<(), String> {
+        let access_token = self.access_token().await?;
+        let response = self
+            .client
+            .post(format!(
+                "{}/api/v1/internal/bionic/delegation-grants/{}/revoke",
+                self.api_base_url, self.grant_id
+            ))
+            .bearer_auth(access_token)
+            .json(&json!({
+                "grant_token": self.grant_token,
+                "bionic_project_id": self.bionic_project_id,
+                "bionic_task_id": self.bionic_task_id,
+                "owner_subject": self.owner_subject
+            }))
+            .send()
+            .await
+            .map_err(|_| "PEA grant revocation service is unavailable".to_string())?;
+        let status = response.status();
+        let _ = read_bounded_body(response).await?;
+        if !status.is_success() {
+            return Err(format!("PEA declined grant revocation (HTTP {status})"));
+        }
+        Ok(())
     }
 
     async fn access_token(&self) -> Result<String, String> {
