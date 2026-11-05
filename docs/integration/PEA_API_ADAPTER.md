@@ -53,7 +53,7 @@ The adapter forwards only the upstream status, body and a small allowlist of saf
 
 ## Agent Runtime integration status
 
-The workspace adapter currently serves PEA data to the Bionic UI. The existing Agent Runtime still uses its standard Bionic tool set; it does **not yet perform semantic/lexical search over PEA SourceFragments or KnowledgeItems**. The shared JWT extractor now validates Keycloak identity for Agent Runtime requests as well, but the access token is not yet propagated into a PEA search tool. Do not describe chat answers as PEA-document-grounded until a tenant/project-scoped PEA search API, a server-side Agent Runtime tool and document-grounded dialogue tests are implemented. Never solve this by giving the browser direct PEA access or by putting service credentials in a prompt.
+The workspace adapter serves PEA data to the Bionic UI. A tenant/project-scoped lexical search API over SourceFragments and its fixed Bionic proxy route are now implemented in source. This is only the retrieval API boundary: the existing Agent Runtime still uses its standard Bionic tool set and does **not yet invoke the PEA search route as a model tool**. The verified caller token is not yet propagated into a PEA search tool invocation. Semantic/vector retrieval, ACL-before-prompt context assembly, provenance citation validation and document-grounded dialogue tests remain outstanding. Do not describe chat answers as PEA-document-grounded until the server-side Agent Runtime tool and end-to-end evidence tests are implemented. Never solve this by giving the browser direct PEA access or by putting service credentials in a prompt.
 
 ## Important deployment note
 
