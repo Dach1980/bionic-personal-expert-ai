@@ -52,7 +52,7 @@ async fn save_results_db(pool: &Pool, request: SaveRequest<'_>) {
         pea_context,
     } = request;
 
-    let validated_snapshot = if tool_calls.is_none() {
+    let validated_snapshot = if tool_calls.as_ref().map_or(true, |calls| calls.is_empty()) {
         pea_context
             .as_ref()
             .map(|context| context.validate_citations(snapshot))
