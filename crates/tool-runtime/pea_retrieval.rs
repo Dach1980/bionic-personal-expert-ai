@@ -202,7 +202,7 @@ fn validate_url(value: &str, name: &str) -> Result<String, String> {
     let local_http = parsed.scheme() == "http"
         && matches!(
             parsed.host_str(),
-            Some("localhost" | "127.0.0.1" | "::1" | "host.docker.internal")
+            Some("localhost" | "127.0.0.1" | "::1" | "host.docker.internal" | "keycloak-service.keycloak.svc.cluster.local")
         );
     if parsed.scheme() != "https" && !local_http {
         return Err(format!("{name} must use HTTPS (HTTP is allowed only for loopback development)"));
