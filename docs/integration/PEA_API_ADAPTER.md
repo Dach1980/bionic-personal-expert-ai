@@ -21,7 +21,7 @@ Required server environment:
 - `PEA_API_BASE_URL`: private/reachable base URL for the PEA API.
 - `PEA_WEB_ORIGIN`: one exact public SPA origin (scheme + host only). If empty/unset, cross-origin browser requests are not enabled. CORS allows only Authorization, Content-Type and Accept for GET/POST/OPTIONS; cookies and wildcard origins are disabled.
 
-The Keycloak access token must contain the `pea-api` audience and a `tenant_id` claim. The latter is the selected active tenant for this initial integration. PEA still verifies active membership; the claim alone never grants access.
+The Keycloak access token must contain the `pea-api` audience. A `tenant_id` claim is optional and is treated only as a legacy default, never as an authorization grant. The browser first calls `GET /api/pea/tenants`; the adapter forwards it to `GET /api/v1/tenants` without a tenant context. For tenant-scoped routes, Bionic derives `X-Tenant-ID` from the fixed route's `{tenant_id}` path segment and forwards it with the verified caller token. PEA independently verifies the active membership and tenant status on every request.
 
 ## Adapter routes
 
@@ -29,7 +29,11 @@ All adapter routes require a verified Keycloak token.
 
 | Bionic route | PEA resource |
 |---|---|
-| `GET /api/pea/session` | Verified user and tenant session |
+| `GET /api/pea/session` | Verified identity before tenant selection |
+| `GET /api/pea/tenants` | Active tenant memberships for the verified identity |
+| `GET /api/pea/admin/me` | Effective system-admin permissions (PEA RBAC) |
+| `GET /api/pea/admin/audit-events` | Global audit events; requires `system.audit.read` |
+| `GET /api/pea/admin/tenants` | Platform tenant inventory; requires `system.tenants.read` |
 | `GET /api/pea/projects` | Current user's authorized project list |
 | `GET /api/pea/tenants/{tenant_id}/projects` | Project list |
 | `POST /api/pea/tenants/{tenant_id}/projects/{project_id}/search` | ACL-scoped lexical SourceFragment search (API/proxy only; not yet an Agent Runtime tool) |
@@ -97,3 +101,15 @@ The public React client uses the Keycloak `pea-web` public client with Authoriza
 
 The Pages document workspace now uses the Adapter to list documents, immutable versions, source fragments, processing runs, rendered artifacts, reviews, findings and evidence. It can create a document, upload a new version, enqueue ingestion with an idempotency key, inspect processing status and preview artifact content. These features are implemented in code; they still require a configured live PEA URL, a configured local model, explicit PEA identity/membership provisioning and a browser E2E pass against the deployed Keycloak/Bionic/PEA stack.
 
+
+
+## Tenant selection and administrative read APIs (2026-11-05)
+
+- `GET /api/pea/session` now resolves the verified identity only; `tenantId` is null until the user selects an active membership.
+- `GET /api/pea/tenants` returns only the caller's active PEA memberships.
+- Tenant-scoped adapter requests derive `X-Tenant-ID` from the adapter's fixed `{tenant_id}` route segment. The browser cannot inject a trusted forwarded-token header or bypass PEA membership checks.
+- Bionic's JWT extractor accepts a valid Keycloak access token with no `tenant_id` claim. If the legacy claim exists, it is only a backward-compatible default for legacy routes.
+- The adapter proxies `/api/pea/admin/me`, `/api/pea/admin/audit-events`, and `/api/pea/admin/tenants`; PEA performs the permission check and RLS enforcement. No Bionic-side role or browser flag grants administrative access.
+- The old `/api/pea/projects` route remains only for legacy tenant-claim clients; the Web client now uses `/api/pea/tenants/{tenant_id}/projects`.
+
+Source implementation and Rust CI are separate acceptance gates. No live Keycloak/Bionic/PEA/PostgreSQL runtime acceptance is implied by these changes.
