@@ -6,7 +6,9 @@ use crate::request_recorder::RequestRecorder;
 use crate::user_config::UserConfig;
 use db::{queries, ChatRole, ChatStatus, Pool};
 use rig::completion::{CompletionRequest, Message as RigMessage};
-use tool_runtime::{get_chat_tool_definitions, pea_search_definition, PeaRetrievalContext, ToolDefinition};
+use tool_runtime::{
+    get_chat_tool_definitions, pea_search_definition, PeaRetrievalContext, ToolDefinition,
+};
 
 pub(crate) struct RigChatRequest {
     pub(crate) model_name: String,
