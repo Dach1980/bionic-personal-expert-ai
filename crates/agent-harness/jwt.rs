@@ -216,7 +216,10 @@ fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -
         || !claims.aud.contains(audience)
         || claims.sub.trim().is_empty()
         || claims.email.trim().is_empty()
-        || uuid::Uuid::parse_str(&claims.tenant_id).is_err()
+        || claims
+            .tenant_id
+            .as_ref()
+            .is_some_and(|tenant_id| uuid::Uuid::parse_str(tenant_id).is_err())
         || claims.exp <= now.saturating_sub(leeway)
         || claims.iat > now.saturating_add(leeway)
         || claims.exp <= claims.iat
