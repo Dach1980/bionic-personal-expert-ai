@@ -256,10 +256,10 @@ impl PeaRetrievalContext {
     /// Remove citation markers that do not refer to a fragment returned in this
     /// scheduled run. The model cannot expand this allowlist itself.
     pub fn validate_citations(&self, snapshot: &str) -> (String, bool) {
-        let allowed = match self.allowed_citations.lock() {
-            Ok(value) => value,
-            Err(_) => return (snapshot.to_string(), true),
-        };
+        let allowed = self
+            .allowed_citations
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut output = String::with_capacity(snapshot.len());
         let mut cursor = 0;
         let mut invalid = false;
