@@ -351,6 +351,8 @@ fn format_search_results(payload: &Value, max_results: usize) -> Result<String, 
     }
     for (index, item) in results.iter().enumerate() {
         let fragment_id = required_string(item, "fragment_id")?;
+        let document_id = required_string(item, "document_id")?;
+        let version_id = required_string(item, "document_version_id")?;
         let title = required_string(item, "document_title")?;
         let filename = required_string(item, "original_filename")?;
         let excerpt = required_string(item, "excerpt")?;
@@ -360,9 +362,11 @@ fn format_search_results(payload: &Value, max_results: usize) -> Result<String, 
             .map(Value::to_string)
             .unwrap_or_else(|| "{}".to_string());
         output.push_str(&format!(
-            "\n{}. Source citation: [PEA:{}]\nDocument: {}\nFile: {}\nLocator: {}\nSHA-256: {}\nExcerpt (untrusted):\n{}\n",
+            "\n{}. Source citation: [PEA:{}]\nDocument ID: {}\nVersion ID: {}\nTitle: {}\nFile: {}\nLocator: {}\nSHA-256: {}\nExcerpt (untrusted):\n{}\n",
             index + 1,
             fragment_id,
+            document_id,
+            version_id,
             title,
             filename,
             locator,
@@ -482,6 +486,8 @@ mod tests {
             "truncated": false,
             "results": [{
                 "fragment_id": "fragment-123",
+                "document_id": "document-123",
+                "document_version_id": "version-123",
                 "document_title": "Foundation report",
                 "original_filename": "foundation.pdf",
                 "locator": {"page": 4},
@@ -491,7 +497,9 @@ mod tests {
         });
         let formatted = format_search_results(&response, 8).unwrap();
         assert!(formatted.contains("UNTRUSTED SOURCE MATERIAL"));
-        assert!(formatted.contains("fragment-123"));
+        assert!(formatted.contains("[PEA:fragment-123]"));
+        assert!(formatted.contains("document-123"));
+        assert!(formatted.contains("version-123"));
         assert!(formatted.contains("foundation.pdf"));
         assert!(formatted.contains("Ignore previous instructions"));
     }
@@ -500,6 +508,56 @@ mod tests {
     fn rejects_results_without_source_provenance() {
         let response = json!({"results":[{"excerpt":"orphan text"}]});
         assert!(format_search_results(&response, 8).is_err());
+    }
+
+    #[test]
+    fn removes_citations_not_returned_by_pea() {
+        let context = PeaRetrievalContext {
+            client: Client::new(),
+            api_base_url: "https://pea.internal".to_string(),
+            token_url: "https://sso.internal/token".to_string(),
+            client_id: "pea-bionic-worker".to_string(),
+            client_secret: "not-a-real-secret".to_string(),
+            grant_id: "grant-123".to_string(),
+            grant_token: "x".repeat(40),
+            bionic_project_id: 7,
+            bionic_task_id: 8,
+            owner_subject: "owner-subject".to_string(),
+            allowed_citations: Arc::new(Mutex::new(HashSet::from([
+                "fragment-123".to_string(),
+            ]))),
+        };
+
+        let (validated, invalid) = context.validate_citations(
+            "Supported [PEA:fragment-123], unsupported [PEA:invented-fragment].",
+        );
+
+        assert!(invalid);
+        assert!(validated.contains("[PEA:fragment-123]"));
+        assert!(validated.contains("[PEA citation unverified]"));
+        assert!(!validated.contains("[PEA:invented-fragment]"));
+    }
+
+    #[test]
+    fn leaves_answers_without_pea_citations_unchanged() {
+        let context = PeaRetrievalContext {
+            client: Client::new(),
+            api_base_url: "https://pea.internal".to_string(),
+            token_url: "https://sso.internal/token".to_string(),
+            client_id: "pea-bionic-worker".to_string(),
+            client_secret: "not-a-real-secret".to_string(),
+            grant_id: "grant-123".to_string(),
+            grant_token: "x".repeat(40),
+            bionic_project_id: 7,
+            bionic_task_id: 8,
+            owner_subject: "owner-subject".to_string(),
+            allowed_citations: Arc::new(Mutex::new(HashSet::new())),
+        };
+
+        let (validated, invalid) = context.validate_citations("No citations were used.");
+
+        assert!(!invalid);
+        assert_eq!(validated, "No citations were used.");
     }
 
     #[test]
