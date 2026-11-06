@@ -29,6 +29,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/rust-check.yml'
+  workflow_dispatch:
 
 concurrency:
   group: rust-ui-verification-${{ github.ref }}
