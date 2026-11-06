@@ -248,7 +248,8 @@ pub async fn chat_generate(
                     chat_id,
                     sub: &current_user.sub,
                     status: ChatStatus::Error,
-                    pea_context: pea_context.clone(),
+                    // The interactive SSE handler has no conversation-scoped PEA grant.
+                    pea_context: None,
                 })
                 .await;
             Err(CustomError::FaultySetup(err.to_string()))
