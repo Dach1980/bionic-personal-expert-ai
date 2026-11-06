@@ -523,9 +523,7 @@ mod tests {
             bionic_project_id: 7,
             bionic_task_id: 8,
             owner_subject: "owner-subject".to_string(),
-            allowed_citations: Arc::new(Mutex::new(HashSet::from([
-                "fragment-123".to_string(),
-            ]))),
+            allowed_citations: Arc::new(Mutex::new(HashSet::from(["fragment-123".to_string()]))),
         };
 
         let (validated, invalid) = context.validate_citations(
