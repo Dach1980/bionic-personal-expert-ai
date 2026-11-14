@@ -270,19 +270,24 @@ where
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let has_forwarded_token_header = parts.headers.contains_key(X_FORWARDED_ACCESS_TOKEN);
         let has_authorization_header = parts.headers.contains_key(header::AUTHORIZATION);
-        tracing::warn!(
-            has_forwarded_token_header,
-            has_authorization_header,
-            "Keycloak JWT authentication request"
-        );
 
         let token = access_token_from_headers(&parts.headers).map_err(|error| {
-            tracing::warn!(reason = "access_token_header_missing_or_malformed", "Keycloak JWT authentication rejected");
+            tracing::warn!(
+                has_forwarded_token_header,
+                has_authorization_header,
+                reason = "access_token_header_missing_or_malformed",
+                "Keycloak JWT authentication rejected"
+            );
             error
         })?;
 
         verify_keycloak_access_token(token).await.map_err(|reason| {
-            tracing::warn!(reason, "Keycloak JWT authentication rejected");
+            tracing::warn!(
+                has_forwarded_token_header,
+                has_authorization_header,
+                reason,
+                "Keycloak JWT authentication rejected"
+            );
             (StatusCode::UNAUTHORIZED, "Invalid Keycloak access token")
         })
     }
