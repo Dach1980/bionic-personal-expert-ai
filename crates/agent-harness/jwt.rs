@@ -133,23 +133,26 @@ fn unix_time() -> Result<u64, ()> {
         .as_secs())
 }
 
-async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
-    let issuer = env::var("OIDC_ISSUER").map_err(|_| ())?;
-    let audience = env::var("OIDC_AUDIENCE").map_err(|_| ())?;
-    let jwks_url = env::var("OIDC_JWKS_URL").map_err(|_| ())?;
+async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, &'static str> {
+    let issuer = env::var("OIDC_ISSUER").map_err(|_| "config_issuer_missing")?;
+    let audience = env::var("OIDC_AUDIENCE").map_err(|_| "config_audience_missing")?;
+    let jwks_url = env::var("OIDC_JWKS_URL").map_err(|_| "config_jwks_url_missing")?;
 
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {
-        return Err(());
+        return Err("jwt_malformed_segment_count");
     }
 
-    let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_| ())?;
-    let header: JwtHeader = serde_json::from_slice(&header_bytes).map_err(|_| ())?;
-    if header.alg != "RS256" || header.kid.trim().is_empty() {
-        return Err(());
+    let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_| "jwt_header_base64_invalid")?;
+    let header: JwtHeader = serde_json::from_slice(&header_bytes).map_err(|_| "jwt_header_json_invalid")?;
+    if header.alg != "RS256" {
+        return Err("jwt_algorithm_not_rs256");
+    }
+    if header.kid.trim().is_empty() {
+        return Err("jwt_key_id_missing");
     }
 
-    let mut jwks = load_jwks(&jwks_url, false).await?;
+    let mut jwks = load_jwks(&jwks_url, false).await.map_err(|_| "jwks_fetch_failed")?;
     let mut jwk = jwks.keys.iter().find(|key| {
         key.kid == header.kid
             && key.kty == "RSA"
@@ -160,7 +163,7 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
                 .is_none_or(|algorithm| algorithm == "RS256")
     });
     if jwk.is_none() {
-        jwks = load_jwks(&jwks_url, true).await?;
+        jwks = load_jwks(&jwks_url, true).await.map_err(|_| "jwks_refresh_failed")?;
         jwk = jwks.keys.iter().find(|key| {
             key.kid == header.kid
                 && key.kty == "RSA"
@@ -171,15 +174,16 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, ()> {
                     .is_none_or(|algorithm| algorithm == "RS256")
         });
     }
-    let jwk = jwk.ok_or(())?;
+    let jwk = jwk.ok_or("jwks_signing_key_not_found")?;
 
-    let signature = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_| ())?;
+    let signature = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_| "jwt_signature_base64_invalid")?;
     let signing_input = format!("{}.{}", parts[0], parts[1]);
-    verify_rs256_signature(&signing_input, &signature, jwk)?;
+    verify_rs256_signature(&signing_input, &signature, jwk).map_err(|_| "jwt_signature_invalid")?;
 
-    let payload = URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_| ())?;
-    let claims: JwtClaims = serde_json::from_slice(&payload).map_err(|_| ())?;
-    validate_claims(&claims, &issuer, &audience, unix_time()?)?;
+    let payload = URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_| "jwt_payload_base64_invalid")?;
+    let claims: JwtClaims = serde_json::from_slice(&payload).map_err(|_| "jwt_claims_json_invalid")?;
+    let now = unix_time().map_err(|_| "system_clock_invalid")?;
+    validate_claims(&claims, &issuer, &audience, now)?;
 
     Ok(Jwt {
         sub: claims.sub,
@@ -210,24 +214,34 @@ fn verify_rs256_signature(signing_input: &str, signature: &[u8], jwk: &Jwk) -> R
     .map_err(|_| ())
 }
 
-fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -> Result<(), ()> {
+fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -> Result<(), &'static str> {
     let leeway = 30_u64;
-    if claims.iss != issuer
-        || !claims.aud.contains(audience)
-        || claims.sub.trim().is_empty()
-        || claims.email.trim().is_empty()
-        || claims
-            .tenant_id
-            .as_ref()
-            .is_some_and(|tenant_id| uuid::Uuid::parse_str(tenant_id).is_err())
-        || claims.exp <= now.saturating_sub(leeway)
-        || claims.iat > now.saturating_add(leeway)
-        || claims.exp <= claims.iat
-        || claims
-            .nbf
-            .is_some_and(|nbf| nbf > now.saturating_add(leeway))
-    {
-        return Err(());
+    if claims.iss != issuer {
+        return Err("claims_issuer_mismatch");
+    }
+    if !claims.aud.contains(audience) {
+        return Err("claims_audience_mismatch");
+    }
+    if claims.sub.trim().is_empty() {
+        return Err("claims_subject_missing");
+    }
+    if claims.email.trim().is_empty() {
+        return Err("claims_email_missing");
+    }
+    if claims.tenant_id.as_ref().is_some_and(|tenant_id| uuid::Uuid::parse_str(tenant_id).is_err()) {
+        return Err("claims_tenant_id_invalid");
+    }
+    if claims.exp <= now.saturating_sub(leeway) {
+        return Err("claims_token_expired");
+    }
+    if claims.iat > now.saturating_add(leeway) {
+        return Err("claims_issued_in_future");
+    }
+    if claims.exp <= claims.iat {
+        return Err("claims_exp_not_after_iat");
+    }
+    if claims.nbf.is_some_and(|nbf| nbf > now.saturating_add(leeway)) {
+        return Err("claims_not_yet_valid");
     }
     Ok(())
 }
@@ -254,11 +268,23 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let token = access_token_from_headers(&parts.headers)?;
+        let has_forwarded_token_header = parts.headers.contains_key(X_FORWARDED_ACCESS_TOKEN);
+        let has_authorization_header = parts.headers.contains_key(header::AUTHORIZATION);
+        tracing::warn!(
+            has_forwarded_token_header,
+            has_authorization_header,
+            "Keycloak JWT authentication request"
+        );
 
-        verify_keycloak_access_token(token)
-            .await
-            .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid Keycloak access token"))
+        let token = access_token_from_headers(&parts.headers).map_err(|error| {
+            tracing::warn!(reason = "access_token_header_missing_or_malformed", "Keycloak JWT authentication rejected");
+            error
+        })?;
+
+        verify_keycloak_access_token(token).await.map_err(|reason| {
+            tracing::warn!(reason, "Keycloak JWT authentication rejected");
+            (StatusCode::UNAUTHORIZED, "Invalid Keycloak access token")
+        })
     }
 }
 
