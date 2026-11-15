@@ -182,6 +182,13 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, &'static str> 
 
     let payload = URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_| "jwt_payload_base64_invalid")?;
     let claims: JwtClaims = serde_json::from_slice(&payload).map_err(|_| "jwt_claims_json_invalid")?;
+    if !claims.aud.contains(&audience) {
+        tracing::warn!(
+            actual_audience = ?claims.aud,
+            expected_audience = %audience,
+            "Keycloak access token audience mismatch"
+        );
+    }
     let now = unix_time().map_err(|_| "system_clock_invalid")?;
     validate_claims(&claims, &issuer, &audience, now)?;
 
