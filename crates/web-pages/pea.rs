@@ -35,6 +35,7 @@ pub fn page(rbac: Rbac, team_id: String, tenant_id: String, tab: &str, locale: &
                     h2 { class: "text-base font-semibold mb-1", "Projects" }
                     p { class: "text-sm text-base-content/60 mb-3", "Choose a project to browse its documents, versions, evidence and knowledge." }
                     div { id: "pea-projects", class: "flex flex-wrap gap-2" }
+                    div { id: "pea-actions", class: "mt-4" }
                 }
                 div {
                     class: "grid grid-cols-1 xl:grid-cols-2 gap-4",
