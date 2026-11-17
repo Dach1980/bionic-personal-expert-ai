@@ -304,6 +304,55 @@ async fn send_conversation_message(
     .await
 }
 
+
+async fn proxy_patch(
+    path: String,
+    user: Jwt,
+    payload: serde_json::Value,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    let base_url = std::env::var("PEA_API_BASE_URL")
+        .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "PEA API is not configured"))?;
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(45))
+        .build()
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+    let mut request = client
+        .patch(format!("{}{}", base_url.trim_end_matches('/'), path))
+        .bearer_auth(user.access_token)
+        .json(&payload);
+    if let Some(tenant_id) = tenant_id_from_upstream_path(&path) {
+        request = request.header("X-Tenant-ID", tenant_id);
+    }
+    let upstream = request.send().await
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
+    let status = StatusCode::from_u16(upstream.status().as_u16())
+        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
+    let body = upstream.bytes().await
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API response could not be read"))?;
+    if body.len() > 32 * 1024 * 1024 {
+        return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+    }
+    let mut response = Response::builder().status(status);
+    if let Some(value) = content_type {
+        response = response.header(header::CONTENT_TYPE, value);
+    }
+    response.body(Body::from(body))
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA response could not be forwarded"))
+}
+
+async fn update_project(
+    Path((tenant_id, project_id)): Path<(Uuid, Uuid)>,
+    user: Jwt,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Response<Body>, (StatusCode, &'static str)> {
+    proxy_patch(
+        format!("/api/v1/tenants/{tenant_id}/projects/{project_id}"),
+        user,
+        payload,
+    ).await
+}
+
 async fn list_projects(
     Path(tenant_id): Path<Uuid>,
     user: Jwt,
@@ -691,6 +740,10 @@ pub fn routes() -> Router {
             post(search_project_sources),
         )
         .route("/api/pea/tenants/{tenant_id}/projects", get(list_projects))
+        .route(
+            "/api/pea/tenants/{tenant_id}/projects/{project_id}",
+            axum::routing::patch(update_project),
+        )
         .route(
             "/api/pea/tenants/{tenant_id}/projects/{project_id}/documents",
             get(list_documents).post(create_document),
