@@ -52,11 +52,15 @@ export function peaWorkspace(): void {
     };
 
 
-    const apiMutation = async (path: string, method: string, payload: JsonRecord): Promise<any> => {
+    const apiMutation = async (path: string, method: string, payload: JsonRecord, idempotencyKey?: string): Promise<any> => {
         const response = await fetch(path, {
             method,
             credentials: "same-origin",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+            },
             body: JSON.stringify(payload),
         });
         if (!response.ok) {
@@ -180,10 +184,8 @@ export function peaWorkspace(): void {
                     `${projectBase()}/documents/${encodeURIComponent(document.id)}/versions/${encodeURIComponent(version.id)}/processing-runs`,
                     "POST",
                     {},
-                ).catch(async (error: unknown) => {
-                    // Processing runs use the same idempotency contract as uploads.
-                    throw error;
-                });
+                    crypto.randomUUID(),
+                );
                 title.value = "";
                 file.value = "";
                 await renderDocuments();
