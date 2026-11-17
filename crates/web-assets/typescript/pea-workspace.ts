@@ -51,10 +51,151 @@ export function peaWorkspace(): void {
         return response.json();
     };
 
+
+    const apiMutation = async (path: string, method: string, payload: JsonRecord): Promise<any> => {
+        const response = await fetch(path, {
+            method,
+            credentials: "same-origin",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const message = await response.text();
+            throw new Error(`API ${response.status}: ${message.slice(0, 300)}`);
+        }
+        return response.json();
+    };
+
+    const apiUpload = async (path: string, form: FormData, idempotencyKey: string): Promise<any> => {
+        const response = await fetch(path, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Accept": "application/json", "Idempotency-Key": idempotencyKey },
+            body: form,
+        });
+        if (!response.ok) {
+            const message = await response.text();
+            throw new Error(`Upload API ${response.status}: ${message.slice(0, 300)}`);
+        }
+        return response.json();
+    };
+
     const base = (): string => `/api/pea/tenants/${encodeURIComponent(tenantId)}`;
     const projectBase = (): string => {
         if (!selectedProject) throw new Error("Select a project first");
         return `${base()}/projects/${encodeURIComponent(selectedProject.id)}`;
+    };
+
+
+    const renderProjectActions = (): void => {
+        const host = document.querySelector<HTMLElement>("#pea-actions");
+        if (!host || !selectedProject) return;
+        host.replaceChildren();
+        const grid = element("div", "grid gap-3 lg:grid-cols-2");
+
+        const settings = element("form", "rounded-lg border border-base-300 p-3 space-y-2");
+        settings.append(element("h3", "font-semibold", "Project settings"));
+        const name = element("input", "input input-bordered input-sm w-full") as HTMLInputElement;
+        name.name = "name";
+        name.required = true;
+        name.maxLength = 300;
+        name.value = selectedProject.name || "";
+        name.setAttribute("aria-label", "Project name");
+        const description = element("textarea", "textarea textarea-bordered textarea-sm w-full") as HTMLTextAreaElement;
+        description.name = "description";
+        description.maxLength = 20000;
+        description.rows = 3;
+        description.value = selectedProject.description || "";
+        description.placeholder = "Project description";
+        description.setAttribute("aria-label", "Project description");
+        const instructions = element("textarea", "textarea textarea-bordered textarea-sm w-full") as HTMLTextAreaElement;
+        instructions.name = "instructions";
+        instructions.maxLength = 20000;
+        instructions.rows = 4;
+        instructions.value = selectedProject.instructions || "";
+        instructions.placeholder = "AI instructions for this project";
+        instructions.setAttribute("aria-label", "AI instructions");
+        const save = element("button", "btn btn-sm btn-primary", "Save settings") as HTMLButtonElement;
+        save.type = "submit";
+        settings.append(name, description, instructions, save);
+        settings.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            save.disabled = true;
+            try {
+                const updated = await apiMutation(
+                    `${base()}/projects/${encodeURIComponent(selectedProject!.id)}`,
+                    "PATCH",
+                    { name: name.value, description: description.value, instructions: instructions.value },
+                ) as JsonRecord;
+                selectedProject = updated;
+                if (breadcrumb) breadcrumb.textContent = updated.name || updated.id;
+                await renderProjects();
+                setStatus("Project settings saved.");
+            } catch (error) {
+                setStatus(error instanceof Error ? error.message : "Unable to save project settings.");
+            } finally {
+                save.disabled = false;
+            }
+        });
+
+        const upload = element("form", "rounded-lg border border-base-300 p-3 space-y-2");
+        upload.append(element("h3", "font-semibold", "Upload document"));
+        const title = element("input", "input input-bordered input-sm w-full") as HTMLInputElement;
+        title.name = "title";
+        title.required = true;
+        title.maxLength = 500;
+        title.placeholder = "Document title";
+        title.setAttribute("aria-label", "Document title");
+        const file = element("input", "file-input file-input-bordered file-input-sm w-full") as HTMLInputElement;
+        file.type = "file";
+        file.required = true;
+        file.accept = ".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv";
+        file.setAttribute("aria-label", "Choose a document");
+        const submit = element("button", "btn btn-sm btn-primary", "Upload and process") as HTMLButtonElement;
+        submit.type = "submit";
+        upload.append(title, file, submit);
+        upload.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const selectedFile = file.files?.[0];
+            if (!selectedFile || !selectedProject) return;
+            submit.disabled = true;
+            setStatus("Creating document record…");
+            try {
+                const document = await apiMutation(
+                    `${projectBase()}/documents`,
+                    "POST",
+                    { title: title.value.trim() || selectedFile.name, document_type: selectedFile.name.split(".").pop() || null },
+                ) as JsonRecord;
+                const form = new FormData();
+                form.append("file", selectedFile, selectedFile.name);
+                const uploadKey = crypto.randomUUID();
+                setStatus("Uploading immutable document version…");
+                const version = await apiUpload(
+                    `${projectBase()}/documents/${encodeURIComponent(document.id)}/versions`,
+                    form,
+                    uploadKey,
+                ) as JsonRecord;
+                setStatus("Queueing document processing…");
+                await apiMutation(
+                    `${projectBase()}/documents/${encodeURIComponent(document.id)}/versions/${encodeURIComponent(version.id)}/processing-runs`,
+                    "POST",
+                    {},
+                ).catch(async (error: unknown) => {
+                    // Processing runs use the same idempotency contract as uploads.
+                    throw error;
+                });
+                title.value = "";
+                file.value = "";
+                await renderDocuments();
+                setStatus("Document uploaded and queued for processing.");
+            } catch (error) {
+                setStatus(error instanceof Error ? error.message : "Document upload failed.");
+            } finally {
+                submit.disabled = false;
+            }
+        });
+        grid.append(settings, upload);
+        host.append(grid);
     };
 
     const showEmpty = (host: HTMLElement | null, message: string): void => {
@@ -83,6 +224,7 @@ export function peaWorkspace(): void {
     const selectProject = async (project: JsonRecord): Promise<void> => {
         selectedProject = project;
         if (breadcrumb) breadcrumb.textContent = project.name || project.id;
+        renderProjectActions();
         if (previewHost) showEmpty(previewHost, "Choose a document version to inspect its source pages.");
         await renderProjects();
         if (activeTab === "reviews") {
