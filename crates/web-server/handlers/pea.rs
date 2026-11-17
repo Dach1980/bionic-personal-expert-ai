@@ -304,7 +304,6 @@ async fn send_conversation_message(
     .await
 }
 
-
 async fn proxy_patch(
     path: String,
     user: Jwt,
@@ -315,7 +314,12 @@ async fn proxy_patch(
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(45))
         .build()
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API client could not be initialized"))?;
+        .map_err(|_| {
+            (
+                StatusCode::BAD_GATEWAY,
+                "PEA API client could not be initialized",
+            )
+        })?;
     let mut request = client
         .patch(format!("{}{}", base_url.trim_end_matches('/'), path))
         .bearer_auth(user.access_token)
@@ -323,22 +327,35 @@ async fn proxy_patch(
     if let Some(tenant_id) = tenant_id_from_upstream_path(&path) {
         request = request.header("X-Tenant-ID", tenant_id);
     }
-    let upstream = request.send().await
+    let upstream = request
+        .send()
+        .await
         .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API is unavailable"))?;
-    let status = StatusCode::from_u16(upstream.status().as_u16())
-        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
-    let body = upstream.bytes().await
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA API response could not be read"))?;
+    let body = upstream.bytes().await.map_err(|_| {
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA API response could not be read",
+        )
+    })?;
     if body.len() > 32 * 1024 * 1024 {
-        return Err((StatusCode::PAYLOAD_TOO_LARGE, "PEA response exceeds adapter limit"));
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "PEA response exceeds adapter limit",
+        ));
     }
     let mut response = Response::builder().status(status);
     if let Some(value) = content_type {
         response = response.header(header::CONTENT_TYPE, value);
     }
-    response.body(Body::from(body))
-        .map_err(|_| (StatusCode::BAD_GATEWAY, "PEA response could not be forwarded"))
+    response.body(Body::from(body)).map_err(|_| {
+        (
+            StatusCode::BAD_GATEWAY,
+            "PEA response could not be forwarded",
+        )
+    })
 }
 
 async fn update_project(
@@ -350,7 +367,8 @@ async fn update_project(
         format!("/api/v1/tenants/{tenant_id}/projects/{project_id}"),
         user,
         payload,
-    ).await
+    )
+    .await
 }
 
 async fn list_projects(
