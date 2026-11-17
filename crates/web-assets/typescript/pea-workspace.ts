@@ -4,7 +4,7 @@ export function peaWorkspace(): void {
     const root = document.querySelector<HTMLElement>("#pea-workspace");
     if (!root) return;
 
-    const tenantId = root.dataset.tenantId || "";
+    let tenantId = root.dataset.tenantId || "";
     const activeTab = new URLSearchParams(window.location.search).get("tab")
         || root.dataset.tab
         || "documents";
@@ -205,6 +205,48 @@ export function peaWorkspace(): void {
         host.replaceChildren(element("p", "text-sm text-base-content/60 py-3", message));
     };
 
+    const renderTenantSelector = (tenants: JsonRecord[]): void => {
+        if (!projectsHost?.parentElement) return;
+
+        const host = element("div", "mb-3");
+        const label = element("label", "block text-xs font-medium mb-1", "Organization");
+        label.htmlFor = "pea-tenant-select";
+
+        const select = document.createElement("select");
+        select.id = "pea-tenant-select";
+        select.className = "select select-bordered select-sm w-full max-w-md";
+        select.disabled = tenants.length === 1;
+
+        tenants.forEach((tenant) => {
+            const option = document.createElement("option");
+            option.value = String(tenant.id);
+            option.textContent = `${tenant.name || tenant.id} · ${tenant.role || "member"}`;
+            select.append(option);
+        });
+
+        select.value = tenantId;
+        select.addEventListener("change", () => {
+            const tenant = tenants.find((item) => String(item.id) === select.value);
+            if (!tenant) return;
+
+            tenantId = String(tenant.id);
+            selectedProject = null;
+            projectsHost?.replaceChildren();
+            document.querySelector<HTMLElement>("#pea-actions")?.replaceChildren();
+
+            if (breadcrumb) breadcrumb.textContent = String(tenant.name || "");
+            if (contentHost) showEmpty(contentHost, "Select a project to browse its documents.");
+            if (previewHost) showEmpty(previewHost, "Choose a document version to inspect its source pages.");
+
+            renderProjects().catch((error: unknown) => {
+                setStatus(error instanceof Error ? error.message : "Unable to load projects.");
+            });
+        });
+
+        host.append(label, select);
+        projectsHost.parentElement.insertBefore(host, projectsHost);
+    };
+
     const renderProjects = async (): Promise<void> => {
         if (!projectsHost) return;
         setStatus("Loading projects…");
@@ -389,22 +431,36 @@ export function peaWorkspace(): void {
         setStatus(`Loaded ${items.length} knowledge item(s).`);
     };
 
-    if (!tenantId) {
-        setStatus("The Keycloak access token has no tenant_id claim. Ask an administrator to configure the PEA tenant attribute.");
-        return;
-    }
+    const initializeWorkspace = async (): Promise<void> => {
+        setStatus("Loading available organizations…");
 
-    renderProjects()
-        .then(() => {
-            if (selectedProject) return;
-            if (contentHost) {
-                const message = activeTab === "reviews"
-                    ? "Select a project to browse its reviews."
-                    : activeTab === "knowledge"
-                        ? "Select a project to browse its knowledge base."
-                        : "Select a project to browse its documents.";
-                showEmpty(contentHost, message);
-            }
-        })
-        .catch((error: unknown) => setStatus(error instanceof Error ? error.message : "Unable to load projects."));
+        const tenants = await api("/api/pea/tenants") as JsonRecord[];
+        if (!Array.isArray(tenants) || tenants.length === 0) {
+            showEmpty(projectsHost, "No active organizations are available for your account.");
+            showEmpty(contentHost, "Ask an administrator to grant you access to an organization.");
+            setStatus("No accessible organizations found.");
+            return;
+        }
+
+        const preferredTenant = tenants.find(
+            (tenant) => String(tenant.id) === tenantId,
+        );
+        tenantId = String((preferredTenant || tenants[0]).id);
+
+        renderTenantSelector(tenants);
+        await renderProjects();
+
+        if (contentHost) {
+            const message = activeTab === "reviews"
+                ? "Select a project to browse its reviews."
+                : activeTab === "knowledge"
+                    ? "Select a project to browse its knowledge base."
+                    : "Select a project to browse its documents.";
+            showEmpty(contentHost, message);
+        }
+    };
+
+    initializeWorkspace().catch((error: unknown) => {
+        setStatus(error instanceof Error ? error.message : "Unable to initialize PEA workspace.");
+    });
 }
