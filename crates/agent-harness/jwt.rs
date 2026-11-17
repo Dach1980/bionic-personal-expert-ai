@@ -143,8 +143,11 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, &'static str> 
         return Err("jwt_malformed_segment_count");
     }
 
-    let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_| "jwt_header_base64_invalid")?;
-    let header: JwtHeader = serde_json::from_slice(&header_bytes).map_err(|_| "jwt_header_json_invalid")?;
+    let header_bytes = URL_SAFE_NO_PAD
+        .decode(parts[0])
+        .map_err(|_| "jwt_header_base64_invalid")?;
+    let header: JwtHeader =
+        serde_json::from_slice(&header_bytes).map_err(|_| "jwt_header_json_invalid")?;
     if header.alg != "RS256" {
         return Err("jwt_algorithm_not_rs256");
     }
@@ -152,7 +155,9 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, &'static str> 
         return Err("jwt_key_id_missing");
     }
 
-    let mut jwks = load_jwks(&jwks_url, false).await.map_err(|_| "jwks_fetch_failed")?;
+    let mut jwks = load_jwks(&jwks_url, false)
+        .await
+        .map_err(|_| "jwks_fetch_failed")?;
     let mut jwk = jwks.keys.iter().find(|key| {
         key.kid == header.kid
             && key.kty == "RSA"
@@ -163,7 +168,9 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, &'static str> 
                 .is_none_or(|algorithm| algorithm == "RS256")
     });
     if jwk.is_none() {
-        jwks = load_jwks(&jwks_url, true).await.map_err(|_| "jwks_refresh_failed")?;
+        jwks = load_jwks(&jwks_url, true)
+            .await
+            .map_err(|_| "jwks_refresh_failed")?;
         jwk = jwks.keys.iter().find(|key| {
             key.kid == header.kid
                 && key.kty == "RSA"
@@ -176,12 +183,17 @@ async fn verify_keycloak_access_token(token: &str) -> Result<Jwt, &'static str> 
     }
     let jwk = jwk.ok_or("jwks_signing_key_not_found")?;
 
-    let signature = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_| "jwt_signature_base64_invalid")?;
+    let signature = URL_SAFE_NO_PAD
+        .decode(parts[2])
+        .map_err(|_| "jwt_signature_base64_invalid")?;
     let signing_input = format!("{}.{}", parts[0], parts[1]);
     verify_rs256_signature(&signing_input, &signature, jwk).map_err(|_| "jwt_signature_invalid")?;
 
-    let payload = URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_| "jwt_payload_base64_invalid")?;
-    let claims: JwtClaims = serde_json::from_slice(&payload).map_err(|_| "jwt_claims_json_invalid")?;
+    let payload = URL_SAFE_NO_PAD
+        .decode(parts[1])
+        .map_err(|_| "jwt_payload_base64_invalid")?;
+    let claims: JwtClaims =
+        serde_json::from_slice(&payload).map_err(|_| "jwt_claims_json_invalid")?;
     if !claims.aud.contains(&audience) {
         tracing::warn!(
             actual_audience = ?claims.aud,
@@ -221,7 +233,12 @@ fn verify_rs256_signature(signing_input: &str, signature: &[u8], jwk: &Jwk) -> R
     .map_err(|_| ())
 }
 
-fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -> Result<(), &'static str> {
+fn validate_claims(
+    claims: &JwtClaims,
+    issuer: &str,
+    audience: &str,
+    now: u64,
+) -> Result<(), &'static str> {
     let leeway = 30_u64;
     if claims.iss != issuer {
         return Err("claims_issuer_mismatch");
@@ -235,7 +252,11 @@ fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -
     if claims.email.trim().is_empty() {
         return Err("claims_email_missing");
     }
-    if claims.tenant_id.as_ref().is_some_and(|tenant_id| uuid::Uuid::parse_str(tenant_id).is_err()) {
+    if claims
+        .tenant_id
+        .as_ref()
+        .is_some_and(|tenant_id| uuid::Uuid::parse_str(tenant_id).is_err())
+    {
         return Err("claims_tenant_id_invalid");
     }
     if claims.exp <= now.saturating_sub(leeway) {
@@ -247,7 +268,10 @@ fn validate_claims(claims: &JwtClaims, issuer: &str, audience: &str, now: u64) -
     if claims.exp <= claims.iat {
         return Err("claims_exp_not_after_iat");
     }
-    if claims.nbf.is_some_and(|nbf| nbf > now.saturating_add(leeway)) {
+    if claims
+        .nbf
+        .is_some_and(|nbf| nbf > now.saturating_add(leeway))
+    {
         return Err("claims_not_yet_valid");
     }
     Ok(())
